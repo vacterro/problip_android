@@ -1,0 +1,94 @@
+{
+  "content_xor": "7b6029ef056f75a7a122e04feb757a46",
+  "inventory_xor": "f9b2b8588288a50ebcfc8de387e94f18",
+  "lineage_hash": "77dbbe795649b8a528ab4e59acc36a8673089467ecc97be440eaf8d08d9edcf6",
+  "members": [
+    [
+      "2026-09-04T19_36_43.308658Z_receipt-801ad4efd951_core_FAIL.json",
+      "5c2483df61836ec395135c3d5e14d429"
+    ],
+    [
+      "2026-09-04T19_50_19.535131Z_receipt-3fcb50094bc5_core_FAIL.json",
+      "7465de0851fc1498f60a1b12c6a75636"
+    ],
+    [
+      "2026-09-04T19_53_47.957415Z_receipt-1155bc501836_core_FAIL.json",
+      "d8b6b90717c95f0f2ac97382accd4823"
+    ],
+    [
+      "2026-09-04T19_54_38.623620Z_receipt-9a2f07d8248c_core_FAIL.json",
+      "4bc2bb534388ac53d97c1c787098d819"
+    ],
+    [
+      "2026-09-04T19_55_03.840660Z_receipt-de38b52b1099_core_FAIL.json",
+      "14dc99f73a0c1b9e8a7d31804f4ab009"
+    ],
+    [
+      "2026-09-04T19_55_38.866668Z_receipt-77496bf702c3_core_FAIL.json",
+      "72b2ebacc79bc6da36a7dffaaaada246"
+    ],
+    [
+      "2026-09-04T19_56_15.236494Z_receipt-1ea538195fae_core_FAIL.json",
+      "fc0946bbe869310027c2fca0550f710b"
+    ],
+    [
+      "2026-09-04T20_08_12.191316Z_receipt-434d5124b1bb_core_FAIL.json",
+      "9aa5a1c1dfc58271bf0c5827237d7eb4"
+    ],
+    [
+      "2026-09-04T20_09_24.047390Z_receipt-3bd48598ab6d_core_FAIL.json",
+      "9112b158740b159411199dc5f8e62520"
+    ],
+    [
+      "2026-09-04T20_19_49.523964Z_receipt-dcdcbf33d8bd_core_FAIL.json",
+      "e652f03a4643c3df2aca8b966db6d31c"
+    ],
+    [
+      "2026-09-04T20_45_43.048811Z_receipt-8a1d1ef77f62_core_FAIL.json",
+      "76b5bef7752c25f31701db6aa8e8c084"
+    ],
+    [
+      "2026-09-04T21_05_42.452065Z_receipt-da59e01aa836_core_FAIL.json",
+      "7f85f142888f2817911771c0cf29c230"
+    ],
+    [
+      "2026-09-04T21_29_42.304605Z_receipt-37bc77f23076_core_FAIL.json",
+      "4859a1a54deab9c7f6be3767ae466aa2"
+    ],
+    [
+      "2026-09-04T21_30_23.420865Z_receipt-3ade9619b19d_core_FAIL.json",
+      "80791f627c8da24eec0670a8244d4058"
+    ],
+    [
+      "2026-09-04T21_30_39.446210Z_receipt-62ca544c3f77_core_FAIL.json",
+      "4b3ba1cb47db4acc0aa7453034830e0c"
+    ],
+    [
+      "2026-09-04T21_30_55.857189Z_receipt-bc38b89473bb_core_FAIL.json",
+      "ccad006fbc02e3b485df55e0212fd109"
+    ],
+    [
+      "2026-09-04T22_12_00.333536Z_receipt-fbbde652860b_core_FAIL.json",
+      "b002517bff549ad1e31e540d39421fd9"
+    ],
+    [
+      "2026-09-04T22_13_12.051455Z_receipt-9ba2de2b3864_core_PASS.json",
+      "50085c590d1441903a05b3be98d84dd2"
+    ],
+    [
+      "2026-09-04T22_13_56.445934Z_receipt-1c8e0cb3ce24_core_PASS.json",
+      "577b113c68cc39805dbdea6f754e1392"
+    ],
+    [
+      "2026-09-04T22_26_34.185501Z_receipt-56bd75e5d4e9_core_PASS.json",
+      "26ccd5a601ef425a1072a979761b5f0f"
+    ],
+    [
+      "2026-09-04T23_12_42.731830Z_receipt-c2716dce772a_core_PASS.json",
+      "60ec3b41355c5b50a94bcd24f3ff6a72"
+    ]
+  ],
+  "receipt_count": 21,
+  "receipt_dir_mtime_ns": 1788563562865330400,
+  "version": 1
+}

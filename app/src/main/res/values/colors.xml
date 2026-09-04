@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Golden Default background from the Windows original. -->
+    <color name="problip_bg">#1A1810</color>
+</resources>
