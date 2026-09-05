@@ -10,6 +10,33 @@ import org.junit.Test
 class PalettesTest {
 
     @Test
+    fun readableForegroundKeepsAccentWhenPossibleAndFallsBackWithoutRecoloring() {
+        assertEquals(PALETTE_CLASSIC.Gold,
+            readableOn(PALETTE_CLASSIC.Gold, PALETTE_CLASSIC.TextMain, PALETTE_CLASSIC.Raised))
+        assertEquals(PALETTE_VINTAGECLASSIC.TextMain,
+            readableOn(PALETTE_VINTAGECLASSIC.Gold, PALETTE_VINTAGECLASSIC.TextMain, PALETTE_VINTAGECLASSIC.Raised))
+        assertEquals(21f, contrastRatio(Color.Black, Color.White), 0.001f)
+        assertEquals(1f, contrastRatio(Color.White, Color.White), 0.001f)
+    }
+
+    @Test
+    fun polishForegroundPolicyCoversFiveControlPalettes() {
+        listOf(PALETTE_CLASSIC, PALETTE_VINTAGECLASSIC, PALETTE_OLED, PALETTE_DRACULA, PALETTE_NORD)
+            .forEach { p ->
+                val action = readableOn(p.Gold, p.TextMain, p.Raised)
+                val secondary = readableOn(p.TextDim, p.TextMain, p.Surface)
+                val edge = readableOn(p.Bevel, p.TextDim, p.Raised, 3f)
+                listOf(p.Bg, p.Surface, p.Raised, p.Compare).forEach { background ->
+                    assertTrue("action text on $background", contrastRatio(action, background) >= 4.5f)
+                    assertTrue("control edge on $background", contrastRatio(edge, background) >= 3f)
+                }
+                assertTrue(contrastRatio(secondary, p.Surface) >= 4.5f)
+                assertTrue(contrastRatio(p.TextMain, p.Bg) >= 4.5f)
+                assertTrue(contrastRatio(p.Danger, p.Bg) >= 4.5f)
+            }
+    }
+
+    @Test
     fun everyCatalogThemeHasItsOwnPalette() {
         // paletteFor never silently falls back for a catalog id.
         ThemeCatalog.all.forEach { entry ->

@@ -1,9 +1,12 @@
 package com.vacster.problip.ui
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -15,7 +18,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,6 +29,7 @@ import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -40,6 +46,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -50,41 +58,68 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.vacster.problip.audio.SoundCatalog
 import com.vacster.problip.core.IntervalMode
 import com.vacster.problip.core.PremiumInterval
 import com.vacster.problip.core.ProblipState
+import com.vacster.problip.service.ProblipSession
 import com.vacster.problip.trial.TrialAccess
 import com.vacster.problip.ui.theme.LocalProblipColors
+import com.vacster.problip.ui.theme.readableOn
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /** Live palette of the active theme (MaterialTheme-style composable getters). */
 internal object P {
     val Bg
         @Composable get() = LocalProblipColors.current.Bg
+
     val Surface
         @Composable get() = LocalProblipColors.current.Surface
+
     val Raised
         @Composable get() = LocalProblipColors.current.Raised
+
     val Bevel
         @Composable get() = LocalProblipColors.current.Bevel
+
     val Gold
-        @Composable get() = LocalProblipColors.current.Gold
+        @Composable
+        get() = LocalProblipColors.current.let { readableOn(it.Gold, it.TextMain, it.Bg) }
+
+    val ActionText
+        @Composable
+        get() = LocalProblipColors.current.let { readableOn(it.Gold, it.TextMain, it.Raised) }
+
+    val Edge
+        @Composable
+        get() = LocalProblipColors.current.let { readableOn(it.Bevel, it.TextDim, it.Raised, 3f) }
+
     val TextMain
         @Composable get() = LocalProblipColors.current.TextMain
+
     val TextDim
-        @Composable get() = LocalProblipColors.current.TextDim
+        @Composable
+        get() = LocalProblipColors.current.let { readableOn(it.TextDim, it.TextMain, it.Surface) }
+
     val Muted
         @Composable get() = LocalProblipColors.current.Muted
+
     val Compare
         @Composable get() = LocalProblipColors.current.Compare
+
     val Success
         @Composable get() = LocalProblipColors.current.Success
+
     val Danger
         @Composable get() = LocalProblipColors.current.Danger
 }
@@ -185,6 +220,8 @@ fun ProblipScreen(
     val gesture = remember { DeveloperGesture() }
     val gestureScope = rememberCoroutineScope()
     var developerUnlocked by remember { mutableStateOf(false) }
+    val feedback = clickFeedback()
+    val view = LocalView.current
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize().background(P.Bg)) {
         val compact = maxHeight < 560.dp || LocalDensity.current.fontScale > 1.15f
@@ -424,9 +461,12 @@ fun ProblipScreen(
                             if (gesture.consumeIfArmedAndTitleStillHeld()) {
                                 viewModel.enableDeveloperAccess()
                                 developerUnlocked = true
+                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                             } else if (running) {
+                                feedback()
                                 viewModel.stop()
                             } else {
+                                feedback()
                                 onStartRequested()
                             }
                         },
@@ -547,7 +587,7 @@ private fun SecondsField(
             modifier =
                 Modifier.width(56.dp)
                     .background(P.Raised)
-                    .border(1.dp, P.Bevel)
+                    .border(1.dp, P.Edge)
                     .padding(horizontal = 6.dp, vertical = 6.dp)
                     .onFocusChanged { if (!it.isFocused) onCommit() },
         )
@@ -566,15 +606,12 @@ private fun SecondsField(
 private fun DeveloperUnlockedDialog(onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier
-                .background(P.Surface)
-                .border(1.dp, P.Bevel)
-                .padding(16.dp),
+            modifier = Modifier.background(P.Surface).border(1.dp, P.Edge).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = "DEVELOPER ACCESS UNLOCKED",
-                color = P.Gold,
+                color = P.ActionText,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
@@ -591,35 +628,60 @@ private fun DeveloperUnlockedDialog(onDismiss: () -> Unit) {
     }
 }
 
-private fun IntervalMode.label(): String = when (this) {
-    IntervalMode.RANDOM_4_7 -> "4-7"
-    IntervalMode.FIXED_5S -> "5"
-    IntervalMode.FIXED_10S -> "10"
-    IntervalMode.FIXED_15S -> "15"
-    IntervalMode.FIXED_20S -> "20"
-    IntervalMode.FIXED_30S -> "30"
-    IntervalMode.PULSE -> "PULSE"
-    IntervalMode.MANUAL -> "MANUAL"
-}
+private fun IntervalMode.label(): String =
+    when (this) {
+        IntervalMode.RANDOM_4_7 -> "4-7"
+        IntervalMode.FIXED_5S -> "5"
+        IntervalMode.FIXED_10S -> "10"
+        IntervalMode.FIXED_15S -> "15"
+        IntervalMode.FIXED_20S -> "20"
+        IntervalMode.FIXED_30S -> "30"
+        IntervalMode.PULSE -> "PULSE"
+        IntervalMode.MANUAL -> "MANUAL"
+    }
 
 @Composable
 private fun StatusText(state: ProblipState) {
+    val owner = LocalLifecycleOwner.current
+    var lit by remember { mutableStateOf(false) }
+    val active = state == ProblipState.STARTING || state == ProblipState.RUNNING
+    LaunchedEffect(owner, active) {
+        if (!active) return@LaunchedEffect
+        owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            ProblipSession.blips.collectLatest {
+                lit = true
+                try {
+                    delay(140)
+                } finally {
+                    lit = false
+                }
+            }
+        }
+    }
     val (text, color) =
         when (state) {
-            ProblipState.STARTING,
-            ProblipState.RUNNING -> "RUNNING" to P.Success
+            ProblipState.STARTING -> "STARTING" to P.TextDim
+            ProblipState.RUNNING -> "RUNNING" to P.TextMain
             ProblipState.ERROR -> "ERROR" to P.Danger
-            ProblipState.STOPPED -> "OFF" to P.Muted
+            ProblipState.STOPPED -> "OFF" to P.TextDim
         }
-    Text(
-        text = text,
-        color = color,
-        fontFamily = FontFamily.Monospace,
-        fontWeight = FontWeight.Bold,
-        fontSize = 14.sp,
-        lineHeight = 18.sp,
-        maxLines = 1,
-    )
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Decorative lamp; status text remains the accessible description. No live
+        // region announcement on every blip, and no replay when returning to Main.
+        Box(Modifier.size(6.dp).background(if (lit) P.Gold else P.Bg).border(1.dp, P.Edge))
+        Text(
+            text = text,
+            color = color,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            lineHeight = 18.sp,
+            maxLines = 1,
+        )
+    }
 }
 
 @Composable
@@ -639,7 +701,7 @@ private fun sliderColors(): SliderColors =
     SliderDefaults.colors(
         thumbColor = P.Gold,
         activeTrackColor = P.Gold,
-        inactiveTrackColor = P.Raised,
+        inactiveTrackColor = P.Edge,
     )
 
 @Composable
@@ -650,18 +712,33 @@ private fun PresetButton(
     modifier: Modifier,
     narrow: Boolean,
 ) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val feedback = clickFeedback()
     Box(
         modifier =
             modifier
-                .background(if (selected) P.Compare else P.Raised)
-                .border(1.dp, P.Bevel)
-                .clickable { onClick() },
+                .background(if (selected || pressed) P.Compare else P.Raised)
+                .border(
+                    if (selected || pressed) 2.dp else 1.dp,
+                    if (selected || pressed) P.ActionText else P.Edge,
+                )
+                .selectable(
+                    selected = selected,
+                    interactionSource = interaction,
+                    indication = null,
+                    role = Role.RadioButton,
+                ) {
+                    if (!selected) feedback()
+                    onClick()
+                },
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
-            color = if (selected) P.Gold else P.TextMain,
+            color = if (selected) P.ActionText else P.TextMain,
             fontFamily = FontFamily.Monospace,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             fontSize = if (narrow) 11.sp else 12.sp,
             lineHeight = 15.sp,
             maxLines = 1,
@@ -680,7 +757,7 @@ private fun SoundSummaryRow(summary: String, label: String?, onClick: () -> Unit
             Modifier.fillMaxWidth()
                 .height(48.dp)
                 .background(P.Surface)
-                .border(1.dp, P.Bevel)
+                .border(1.dp, P.Edge)
                 .clickable { onClick() }
                 .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -694,7 +771,7 @@ private fun SoundSummaryRow(summary: String, label: String?, onClick: () -> Unit
                 if (label != null) {
                     Text(
                         text = label,
-                        color = P.Gold,
+                        color = P.ActionText,
                         fontFamily = FontFamily.Monospace,
                         fontSize = 10.sp,
                         lineHeight = 12.sp,
@@ -714,7 +791,7 @@ private fun SoundSummaryRow(summary: String, label: String?, onClick: () -> Unit
         }
         Text(
             text = ">",
-            color = P.Gold,
+            color = P.ActionText,
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp,
             lineHeight = 16.sp,
@@ -731,7 +808,7 @@ private fun NavRow(label: String, onClick: () -> Unit, modifier: Modifier) {
             modifier
                 .height(36.dp)
                 .background(P.Surface)
-                .border(1.dp, P.Bevel)
+                .border(1.dp, P.Edge)
                 .clickable { onClick() }
                 .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -748,7 +825,7 @@ private fun NavRow(label: String, onClick: () -> Unit, modifier: Modifier) {
         Spacer(modifier = Modifier.weight(1f))
         Text(
             text = ">",
-            color = P.Gold,
+            color = P.ActionText,
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp,
             lineHeight = 16.sp,
@@ -763,11 +840,19 @@ private fun NavRow(label: String, onClick: () -> Unit, modifier: Modifier) {
  */
 @Composable
 private fun MinimizeButton(onClick: () -> Unit, modifier: Modifier) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val feedback = clickFeedback()
     Box(
         modifier =
-            modifier.height(48.dp).background(P.Surface).border(1.dp, P.Bevel).clickable {
-                onClick()
-            },
+            modifier
+                .height(48.dp)
+                .background(if (pressed) P.Compare else P.Surface)
+                .border(if (pressed) 2.dp else 1.dp, P.Edge)
+                .clickable(interactionSource = interaction, indication = null, role = Role.Button) {
+                    feedback()
+                    onClick()
+                },
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -783,26 +868,42 @@ private fun MinimizeButton(onClick: () -> Unit, modifier: Modifier) {
 }
 
 @Composable
-internal fun BigButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun BigButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    fontSize: TextUnit = 18.sp,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
     Box(
         modifier =
             modifier
                 .fillMaxWidth()
                 .height(52.dp)
-                .background(P.Raised)
-                .border(1.dp, P.Bevel)
-                .clickable { onClick() },
+                .background(if (pressed) P.Compare else P.Raised)
+                .border(if (pressed) 3.dp else 2.dp, P.ActionText)
+                .clickable(interactionSource = interaction, indication = null, role = Role.Button) {
+                    onClick()
+                },
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,
-            color = P.Gold,
+            color = P.ActionText,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            fontSize = 18.sp,
+            fontSize = fontSize,
             lineHeight = 22.sp,
-            letterSpacing = 2.sp,
+            letterSpacing = 1.sp,
             maxLines = 1,
         )
     }
+}
+
+/** Standard view feedback respects the user's system setting; no vibration permission. */
+@Composable
+internal fun clickFeedback(): () -> Unit {
+    val view = LocalView.current
+    return { view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK) }
 }

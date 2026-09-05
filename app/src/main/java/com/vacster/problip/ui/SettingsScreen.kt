@@ -47,7 +47,7 @@ fun SettingsScreen(
                 } else {
                     "OFF"
                 },
-                color = if (access.developerAccess) P.Gold else P.Muted,
+                color = if (access.developerAccess) P.Gold else P.TextDim,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 11.sp,
                 letterSpacing = 1.sp,
@@ -56,6 +56,7 @@ fun SettingsScreen(
 
         BigButton(
             text = "RESET TEMPORARY ACCESS",
+            fontSize = 13.sp,
             onClick = viewModel::resetTemporaryAccess,
         )
         Text(

@@ -10,15 +10,20 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.luminance
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vacster.problip.billing.ProductCatalog
+import com.vacster.problip.theme.ThemeCatalog
 import com.vacster.problip.ui.ProblipRoot
 import com.vacster.problip.ui.ProblipViewModel
 import com.vacster.problip.ui.theme.ProblipTheme
+import com.vacster.problip.ui.theme.paletteFor
 
 class MainActivity : ComponentActivity() {
 
@@ -47,6 +52,15 @@ class MainActivity : ComponentActivity() {
             val owned by viewModel.owned.collectAsState()
             val access by viewModel.access.collectAsState()
             val ownsThemePack = ProductCatalog.THEME_PACK in owned
+            val lightBars = paletteFor(
+                ThemeCatalog.effective(settings.themeId, ownsThemePack, access.grantedIds).id,
+            ).Bg.luminance() > 0.5f
+            SideEffect {
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = lightBars
+                    isAppearanceLightNavigationBars = lightBars
+                }
+            }
             // A theme trial expiring — or Developer Access ending — flips the
             // granted set, which recomposes straight into the Classic palette; no
             // Activity restart involved.

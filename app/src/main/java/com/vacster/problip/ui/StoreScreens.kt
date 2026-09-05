@@ -4,14 +4,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,18 +24,19 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vacster.problip.audio.SoundEntry
 import com.vacster.problip.audio.SoundCatalog
 import com.vacster.problip.billing.ProductCatalog
 import com.vacster.problip.theme.ThemeCatalog
 
 /**
- * Secondary screen: buy individual sounds, or start a five-minute trial. Both
- * actions stay visible on an unowned row — a trial must not hide the purchase.
+ * Secondary screen: buy individual sounds, or start a five-minute trial. Both actions stay visible
+ * on an unowned row — a trial must not hide the purchase.
  */
 @Composable
 fun SoundsScreen(
@@ -48,66 +54,61 @@ fun SoundsScreen(
     val trialExpiries by viewModel.trialExpiries.collectAsState()
     val now = rememberTrialNow(enabled = access.activeTrials.isNotEmpty())
 
-    val effectivePool = SoundCatalog.playableSelection(settings.selectedSounds, owned, access.grantedIds)
+    val effectivePool =
+        SoundCatalog.playableSelection(settings.selectedSounds, owned, access.grantedIds)
     StoreScaffold(title = "SOUNDS", onBack = onBack) {
+        SectionLabel("SELECT YOUR SOUND POOL")
         SoundCatalog.all.forEach { entry ->
-            PoolRow(
-                entry = entry,
-                checked = entry.id in effectivePool,
-                label = trialLabel(
-                    free = entry.free,
-                    owned = entry.id in owned,
-                    developerAccess = access.developerAccess,
-                    expiryMillis = trialExpiries[entry.id],
-                    nowMillis = now,
-                ),
-                onToggle = { viewModel.toggleSound(entry.id) },
-            )
             val price = products[entry.id]?.formattedPrice
-            val state = storeItemState(
-                productId = entry.id,
-                free = entry.free,
-                owned = owned,
-                pending = pending,
-                price = price,
-                connection = connection,
-            )
-            StoreRow(
-                name = entry.displayName,
-                state = state,
-                price = price,
-                // Owned and free rows have nothing to try; a pending purchase is
-                // already on its way, so pushing a trial there would be noise.
-                // Developer Access shows DEV instead of TRY, because a granted
-                // item cannot start a trial (TrialAccess.startTrial refuses).
-                trial = when (state) {
-                    StoreItemState.PURCHASABLE, StoreItemState.LOADING, StoreItemState.UNAVAILABLE ->
-                        trialLabel(
-                            free = false,
-                            owned = false,
-                            developerAccess = access.developerAccess,
-                            expiryMillis = trialExpiries[entry.id],
-                            nowMillis = now,
-                        )
-                    else -> null
-                },
-                onTrial = { viewModel.trySound(entry.id) },
-                onClick = { onPurchaseRequested(entry.id) },
-            )
+            val state =
+                storeItemState(
+                    productId = entry.id,
+                    free = entry.free,
+                    owned = owned,
+                    pending = pending,
+                    price = price,
+                    connection = connection,
+                )
+            val granted = access.grants(entry.id, free = entry.free, owned = entry.id in owned)
+            Column(modifier = Modifier.background(P.Surface)) {
+                SelectionRow(
+                    name = entry.displayName,
+                    selected = entry.id in effectivePool,
+                    multiple = true,
+                    label =
+                        if (granted)
+                            trialLabel(
+                                free = entry.free,
+                                owned = entry.id in owned,
+                                developerAccess = access.developerAccess,
+                                expiryMillis = trialExpiries[entry.id],
+                                nowMillis = now,
+                            ) ?: "INCLUDED"
+                        else null,
+                    onSelect = { viewModel.toggleSound(entry.id) },
+                )
+                if (state != StoreItemState.INCLUDED && state != StoreItemState.OWNED) {
+                    StoreRow(
+                        state = state,
+                        price = price,
+                        actionName = entry.displayName,
+                        trial =
+                            if (!granted && state != StoreItemState.PENDING) "TRY 5 MIN" else null,
+                        onTrial = { viewModel.trySound(entry.id) },
+                        onClick = { onPurchaseRequested(entry.id) },
+                    )
+                }
+            }
         }
 
-        StoreFooter(
-            storeError = storeError,
-            onRetry = viewModel::retryStore,
-        )
+        StoreFooter(storeError = storeError, onRetry = viewModel::retryStore)
     }
 }
 
 /**
- * Secondary screen: pick any theme, and buy the one pack that unlocks the five
- * non-classic palettes permanently. Every row is selectable — picking a premium
- * palette without the pack starts its own five-minute trial — and the pack row
- * stays the only purchase entry point.
+ * Secondary screen: pick any theme, and buy the one pack that unlocks the five non-classic palettes
+ * permanently. Every row is selectable — picking a premium palette without the pack starts its own
+ * five-minute trial — and the pack row stays the only purchase entry point.
  */
 @Composable
 fun ThemesScreen(
@@ -127,34 +128,20 @@ fun ThemesScreen(
 
     val ownsPack = ProductCatalog.THEME_PACK in owned
     val packPrice = products[ProductCatalog.THEME_PACK]?.formattedPrice
-    val packState = storeItemState(
-        productId = ProductCatalog.THEME_PACK,
-        free = false,
-        owned = owned,
-        pending = pending,
-        price = packPrice,
-        connection = connection,
-    )
+    val packState =
+        storeItemState(
+            productId = ProductCatalog.THEME_PACK,
+            free = false,
+            owned = owned,
+            pending = pending,
+            price = packPrice,
+            connection = connection,
+        )
     // The selection marker follows the EFFECTIVE theme, so an expired trial shows
     // Classic selected here without any Activity restart.
     val effectiveTheme = ThemeCatalog.effective(settings.themeId, ownsPack, access.grantedIds).id
 
     StoreScaffold(title = "THEMES", onBack = onBack) {
-        ThemeCatalog.all.forEach { entry ->
-            ThemePickRow(
-                name = entry.displayName,
-                selected = entry.id == effectiveTheme,
-                label = trialLabel(
-                    free = entry.free,
-                    owned = ownsPack,
-                    developerAccess = access.developerAccess,
-                    expiryMillis = trialExpiries[entry.id],
-                    nowMillis = now,
-                ),
-                onSelect = { viewModel.setTheme(entry.id) },
-            )
-        }
-
         SectionLabel("CUSTOMIZATION PACK")
         StoreRow(
             name = "All extra palettes + Manual & Pulse Interval",
@@ -163,39 +150,51 @@ fun ThemesScreen(
             onClick = { onPurchaseRequested(ProductCatalog.THEME_PACK) },
         )
 
-        StoreFooter(
-            storeError = storeError,
-            onRetry = viewModel::retryStore,
-        )
+        SectionLabel("SELECT OR TRY A PALETTE")
+        Column(
+            modifier = Modifier.selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            ThemeCatalog.all.forEach { entry ->
+                SelectionRow(
+                    name = entry.displayName,
+                    selected = entry.id == effectiveTheme,
+                    label =
+                        trialLabel(
+                            free = entry.free,
+                            owned = ownsPack,
+                            developerAccess = access.developerAccess,
+                            expiryMillis = trialExpiries[entry.id],
+                            nowMillis = now,
+                        ) ?: "INCLUDED",
+                    onSelect = { viewModel.setTheme(entry.id) },
+                )
+            }
+        }
+        StoreFooter(storeError = storeError, onRetry = viewModel::retryStore)
     }
 }
 
 @Composable
-internal fun StoreScaffold(
-    title: String,
-    onBack: () -> Unit,
-    content: @Composable () -> Unit,
-) {
+internal fun StoreScaffold(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(P.Bg)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+        modifier =
+            Modifier.fillMaxSize()
+                .background(P.Bg)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "< BACK",
                 color = P.Gold,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 13.sp,
-                modifier = Modifier
-                    .clickable { onBack() }
-                    .padding(vertical = 4.dp, horizontal = 2.dp),
+                modifier =
+                    Modifier.clickable(role = Role.Button) { onBack() }
+                        .sizeIn(minWidth = 72.dp, minHeight = 48.dp)
+                        .padding(vertical = 14.dp, horizontal = 8.dp),
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
@@ -211,110 +210,161 @@ internal fun StoreScaffold(
     }
 }
 
-/**
- * One purchasable line. Only PURCHASABLE rows react to a tap on the row itself;
- * [trial] is a separate tap target so BUY and TRY never compete for it.
- */
+/** Selection never purchases: TRY and BUY have separate, explicit touch targets. */
 @Composable
 private fun StoreRow(
-    name: String,
     state: StoreItemState,
     price: String?,
     onClick: () -> Unit,
+    name: String? = null,
+    actionName: String = name.orEmpty(),
     trial: String? = null,
     onTrial: () -> Unit = {},
 ) {
     val buyable = state == StoreItemState.PURCHASABLE
     val label = storeItemLabel(state, price)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(P.Surface)
-            .border(1.dp, P.Bevel)
-            .clickable(enabled = buyable) { onClick() }
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val feedback = clickFeedback()
+    Column(
+        modifier = Modifier.fillMaxWidth().background(P.Surface).padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(
-            text = name,
-            color = when (state) {
-                StoreItemState.INCLUDED, StoreItemState.OWNED -> P.TextMain
-                else -> P.TextDim
-            },
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        if (trial != null) {
+        if (name != null) {
             Text(
-                text = trial,
-                color = P.Gold,
+                name,
+                color = P.TextMain,
                 fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp,
-                letterSpacing = 1.sp,
-                modifier = Modifier
-                    .clickable { onTrial() }
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                fontSize = 13.sp,
+                lineHeight = 17.sp,
             )
         }
-        if (label != null) {
-            Text(
-                text = if (buyable) "BUY $label" else label,
-                color = when (state) {
-                    StoreItemState.PURCHASABLE -> P.Gold
-                    StoreItemState.OWNED -> P.Success
-                    StoreItemState.PENDING -> P.Compare
-                    StoreItemState.UNAVAILABLE -> P.Danger
-                    else -> P.TextDim
-                },
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp,
-                letterSpacing = 1.sp,
-            )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (trial != null) {
+                Box(
+                    modifier =
+                        Modifier.weight(1f)
+                            .heightIn(min = 48.dp)
+                            .border(1.dp, P.Edge)
+                            .clickable(
+                                role = Role.Button,
+                                onClickLabel = "Try $actionName for five minutes",
+                            ) {
+                                feedback()
+                                onTrial()
+                            }
+                            .padding(6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        trial,
+                        color = P.ActionText,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                    )
+                }
+            }
+            if (label != null) {
+                Box(
+                    modifier =
+                        Modifier.weight(1f)
+                            .heightIn(min = 48.dp)
+                            .border(if (buyable) 2.dp else 1.dp, P.Edge)
+                            .clickable(
+                                enabled = buyable,
+                                role = Role.Button,
+                                onClickLabel = "Buy $actionName",
+                            ) {
+                                onClick()
+                            }
+                            .padding(6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        if (buyable) "BUY $label" else label,
+                        color = if (buyable) P.ActionText else P.TextDim,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                    )
+                }
+            }
         }
     }
 }
 
-/**
- * One theme choice. Always selectable: an unowned premium palette starts its
- * trial on tap, so there is no inert row any more. [label] shows OWNED,
- * "TRIAL mm:ss" or "TRY 5 MIN".
- */
+/** One 48 dp choice, with a real checkbox/radio state and a non-purchase access badge. */
 @Composable
-private fun ThemePickRow(
+private fun SelectionRow(
     name: String,
     selected: Boolean,
     label: String?,
     onSelect: () -> Unit,
+    multiple: Boolean = false,
 ) {
+    val feedback = clickFeedback()
+    val choose = {
+        if (multiple || !selected) feedback()
+        onSelect()
+    }
+    val selection =
+        if (multiple) {
+            Modifier.toggleable(
+                value = selected,
+                role = Role.Checkbox,
+                onValueChange = { choose() },
+            )
+        } else {
+            Modifier.selectable(selected = selected, role = Role.RadioButton, onClick = choose)
+        }
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onSelect() }
-            .padding(vertical = 2.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .background(if (selected) P.Compare else P.Surface)
+                .border(if (selected) 2.dp else 1.dp, if (selected) P.ActionText else P.Edge)
+                .then(selection)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = if (selected) "(*)" else "( )",
-            color = P.Gold,
+            text =
+                if (multiple) {
+                    if (selected) "[x]" else "[ ]"
+                } else {
+                    if (selected) "(*)" else "( )"
+                },
+            modifier = Modifier.clearAndSetSemantics {},
+            color = P.ActionText,
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp,
+            lineHeight = 16.sp,
         )
-        Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = name,
-            color = if (selected) P.TextMain else P.TextDim,
+            name,
+            modifier = Modifier.weight(1f),
+            color = P.TextMain,
             fontFamily = FontFamily.Monospace,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             fontSize = 13.sp,
+            lineHeight = 17.sp,
         )
         if (label != null) {
-            Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = label,
-                color = if (label == "OWNED") P.Success else P.Gold,
+                label,
+                modifier =
+                    Modifier.background(P.Compare)
+                        .border(1.dp, P.Edge)
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                color = P.ActionText,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
-                letterSpacing = 1.sp,
+                lineHeight = 12.sp,
+                maxLines = 1,
             )
         }
     }
@@ -338,48 +388,4 @@ private fun StoreFooter(storeError: String?, onRetry: () -> Unit) {
         fontFamily = FontFamily.Monospace,
         fontSize = 11.sp,
     )
-}
-
-/**
- * Pool membership toggle for one catalog sound. [label] carries the access state
- * (OWNED / TRIAL mm:ss / TRY 5 MIN); tapping a locked row starts its trial.
- */
-@Composable
-private fun PoolRow(
-    entry: SoundEntry,
-    checked: Boolean,
-    label: String?,
-    onToggle: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onToggle() }
-            .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = if (checked) "[x]" else "[ ]",
-            color = P.Gold,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = entry.displayName,
-            color = if (checked) P.TextMain else P.TextDim,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
-        )
-        if (label != null) {
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = label,
-                color = if (label == "OWNED") P.Success else P.Gold,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
-                letterSpacing = 1.sp,
-            )
-        }
-    }
 }

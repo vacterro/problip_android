@@ -1,8 +1,10 @@
 package com.vacster.problip.service
 
 import com.vacster.problip.core.ProblipState
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
@@ -14,6 +16,15 @@ import kotlinx.coroutines.flow.asStateFlow
  * process-wide instance plus the flows the UI collects.
  */
 object ProblipSession {
+    // UI-only signal: no replay on return to Main, no persistence, no widget
+    // observer, and no suspended audio producer if the UI is absent or busy.
+    private val _blips = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val blips = _blips.asSharedFlow()
+
+    internal fun reportPlayback(succeeded: Boolean) {
+        if (succeeded) _blips.tryEmit(Unit)
+    }
+
     private val _state = MutableStateFlow(ProblipState.STOPPED)
     val state: StateFlow<ProblipState> = _state.asStateFlow()
 

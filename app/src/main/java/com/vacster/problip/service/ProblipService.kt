@@ -17,6 +17,7 @@ import com.vacster.problip.ProblipApp
 import com.vacster.problip.audio.SoundPoolAudioPlayer
 import com.vacster.problip.audio.Volume
 import com.vacster.problip.billing.ProductCatalog
+import com.vacster.problip.core.BlipPlayer
 import com.vacster.problip.core.BlipScheduler
 import com.vacster.problip.core.CoroutineDelayBoundary
 import com.vacster.problip.core.DelayBoundary
@@ -106,7 +107,11 @@ class ProblipService : Service() {
 
         val settings = settingsState ?: return
         val audio = SoundPoolAudioPlayer(this)
-        val scheduler = BlipScheduler(scope, audio, delayBoundary = timingBoundary())
+        val scheduler = BlipScheduler(
+            scope,
+            BlipPlayer { audio.play().also(ProblipSession::reportPlayback) },
+            delayBoundary = timingBoundary(),
+        )
         this.audio = audio
         this.scheduler = scheduler
         // After the no-op check: a duplicate START must not orphan the token of

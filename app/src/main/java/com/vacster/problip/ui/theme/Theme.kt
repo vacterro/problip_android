@@ -4,6 +4,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import com.vacster.problip.theme.ThemeCatalog
 
 /**
@@ -26,9 +28,12 @@ fun ProblipTheme(
         MaterialTheme(
             colorScheme = darkColorScheme(
                 background = colors.Bg,
+                onBackground = colors.TextMain,
                 surface = colors.Surface,
-                primary = colors.Gold,
-                onPrimary = colors.BDark,
+                onSurface = colors.TextMain,
+                onSurfaceVariant = readableOn(colors.TextDim, colors.TextMain, colors.Surface),
+                primary = readableOn(colors.Gold, colors.TextMain, colors.Raised),
+                onPrimary = colors.Bg,
                 secondary = colors.Bevel,
                 onSecondary = colors.TextMain,
                 error = colors.Danger,
@@ -36,4 +41,18 @@ fun ProblipTheme(
             content = content,
         )
     }
+}
+
+/** Prefer the palette accent, but use its own text token when the surface defeats it. */
+internal fun readableOn(
+    preferred: Color,
+    fallback: Color,
+    background: Color,
+    minimum: Float = 4.5f,
+): Color = if (contrastRatio(preferred, background) >= minimum) preferred else fallback
+
+internal fun contrastRatio(a: Color, b: Color): Float {
+    val first = a.luminance()
+    val second = b.luminance()
+    return (maxOf(first, second) + 0.05f) / (minOf(first, second) + 0.05f)
 }
