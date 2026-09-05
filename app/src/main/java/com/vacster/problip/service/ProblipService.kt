@@ -14,6 +14,7 @@ import android.util.Log
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.vacster.problip.ProblipApp
+import com.vacster.problip.R
 import com.vacster.problip.audio.SoundPoolAudioPlayer
 import com.vacster.problip.audio.Volume
 import com.vacster.problip.billing.ProductCatalog
@@ -25,6 +26,7 @@ import com.vacster.problip.core.PremiumInterval
 import com.vacster.problip.core.ProblipState
 import com.vacster.problip.settings.SettingsRepository
 import com.vacster.problip.trial.PremiumAccess
+import com.vacster.problip.withAppLocale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -137,7 +139,7 @@ class ProblipService : Service() {
                     // expiring) load in place; the scheduler loop is untouched.
                     if (scheduler.state.value != ProblipState.STOPPED && plan.pool != preparedPool) {
                         if (audio.prepare(plan.pool)) preparedPool = plan.pool
-                        else failSession(token, SOUND_LOAD_FAILED)
+                        else failSession(token, localizedString(R.string.error_sound_load))
                     }
                 }
         }
@@ -154,7 +156,7 @@ class ProblipService : Service() {
                 accessNow = { ProblipApp.trials(this@ProblipService).access.value },
             )
             if (!audio.prepare(plan.pool)) {
-                failSession(token, SOUND_LOAD_FAILED)
+                failSession(token, localizedString(R.string.error_sound_load))
                 return@launch
             }
             preparedPool = plan.pool
@@ -164,7 +166,7 @@ class ProblipService : Service() {
         sessionJobs += scope.launch {
             scheduler.state.collect { st ->
                 if (st == ProblipState.ERROR) {
-                    failSession(token, scheduler.error.value ?: PLAYBACK_FAILED)
+                    failSession(token, scheduler.error.value ?: localizedString(R.string.error_playback))
                 } else {
                     onMain { if (lifecycle.report(token, st)) applyWakeLock() }
                 }
@@ -248,6 +250,9 @@ class ProblipService : Service() {
         if (Looper.myLooper() == main.looper) block() else main.post(block)
     }
 
+    /** Locale-aware user-visible text for session failures. */
+    private fun localizedString(resId: Int): String = withAppLocale().getString(resId)
+
     private fun goForeground(settings: SettingsRepository.Settings) {
         ServiceCompat.startForeground(
             this,
@@ -296,8 +301,6 @@ class ProblipService : Service() {
         const val ACTION_START = "com.vacster.problip.action.START"
         const val ACTION_STOP = "com.vacster.problip.action.STOP"
 
-        private const val SOUND_LOAD_FAILED = "Sound could not be loaded"
-        private const val PLAYBACK_FAILED = "Playback failed"
         private const val TIMING_TAG = "ProblipTiming"
 
         fun start(context: Context) {

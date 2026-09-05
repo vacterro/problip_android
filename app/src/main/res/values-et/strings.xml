@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Problip</string>
+    <string name="widget_title">PROBLIP</string>
+
+    <string name="status_off">VÄLJAS</string>
+    <string name="status_starting">KÄIVITUB</string>
+    <string name="status_running">TÖÖTAB</string>
+    <string name="status_error">VIGA</string>
+
+    <string name="action_start">START</string>
+    <string name="action_stop">STOP</string>
+    <string name="action_minimize">MINIMEERI</string>
+    <string name="action_minimize_short">MIN</string>
+    <string name="action_exit">VÄLJU</string>
+    <string name="ok">OK</string>
+    <string name="developer_label">DEV</string>
+
+    <string name="volume_label">TUGEVUS</string>
+    <string name="volume_label_short">TUG</string>
+    <string name="volume_percent">%1$d%%</string>
+    <string name="interval_label">INTERVALL</string>
+    <string name="sound_label">HELI</string>
+    <string name="themes_label">TEEMAD</string>
+    <string name="themes_label_short">TEEMAD</string>
+    <string name="settings_label">SEADED</string>
+    <string name="settings_label_short">SEADED</string>
+    <string name="interval_random">4-7</string>
+    <string name="interval_5s">5</string>
+    <string name="interval_10s">10</string>
+    <string name="interval_15s">15</string>
+    <string name="interval_20s">20</string>
+    <string name="interval_30s">30</string>
+    <string name="interval_pulse">PULSS</string>
+    <string name="interval_manual">KÄSITSI</string>
+    <string name="pulse_hint">5s / 10-20s</string>
+    <string name="manual_from">ALATES</string>
+    <string name="manual_to">KUNI</string>
+    <string name="seconds_suffix">s</string>
+
+    <plurals name="sounds_selected">
+        <item quantity="one">%d heli valitud</item>
+        <item quantity="other">%d heli valitud</item>
+    </plurals>
+    <plurals name="sounds_selected_short">
+        <item quantity="one">%d heli</item>
+        <item quantity="other">%d heli</item>
+    </plurals>
+
+    <string name="owned_label">OMATUD</string>
+    <string name="included_label">KAASAS</string>
+    <string name="trial_format">PROOV %1$s</string>
+    <string name="try_5_min">PROOVI 5 MIN</string>
+    <string name="remaining_format">veel %1$s</string>
+    <string name="developer_unlocked_title">ARENDAJA LIGIPÄÄS AVATUD</string>
+    <string name="developer_unlocked_body">7 PÄEVA PREMIUM-LIGIPÄÄSU</string>
+
+    <string name="error_sound_load">Heli ei saanud laadida</string>
+    <string name="error_playback">Taasesitus ebaõnnestus</string>
+
+    <string name="settings_title">SEADED</string>
+    <string name="temporary_access">AJUTINE LIGIPÄÄS</string>
+    <string name="developer_access">Arendaja ligipääs</string>
+    <string name="reset_temporary_access">TÜHISTA AJUTINE LIGIPÄÄS</string>
+    <string name="reset_temporary_access_hint">Tühjendab arendaja ligipääsu ja kõik viieminutilised proovid. Ostud jäävad alles.</string>
+    <string name="language_label">KEEL</string>
+    <string name="language_value_system">SÜSTEEM</string>
+    <string name="language_option_system">Süsteemi vaikeväärtus</string>
+
+    <string name="sounds_title">HELIKUD</string>
+    <string name="select_sound_pool">VALI OMA HELID</string>
+    <string name="back_label">&lt; TAGASI</string>
+    <string name="store_try_a11y">Proovi «%1$s» 5 minutit</string>
+    <string name="store_buy_a11y">Osta «%1$s»</string>
+    <string name="store_buy_format">OSTA %1$s</string>
+    <string name="retry_store">PROOVI POODI UUESTI</string>
+    <string name="purchases_restored_hint">Ostud taastatakse sinu Google\'i kontost automaatselt.</string>
+    <string name="themes_title">TEEMAD</string>
+    <string name="customization_pack">KOHANDUSPAKETT</string>
+    <string name="pack_description">Kõik lisapaletid + Käsitsi ja Pulss intervall</string>
+    <string name="select_palette">VALI VÕI PROOVI PALETTI</string>
+    <string name="store_pending">OOTEL</string>
+    <string name="store_loading">LAADIMINE</string>
+    <string name="store_unavailable">POLE SAADAVAL</string>
+
+    <string name="error_store_unavailable">Google Play pood ei ole praegu saadaval.</string>
+    <string name="error_purchase_query">Ei saanud oste Google Playst kontrollida.</string>
+    <string name="error_price_query">Ei saanud Google Playst hindu laadida.</string>
+    <string name="error_prices_loading">Hinnad ei ole veel laadinud. Proovi mõne hetke pärast uuesti.</string>
+    <string name="error_purchase_screen">Google Play ei saanud ostuvaadet avada.</string>
+
+    <string name="notif_title">Problip töötab</string>
+    <string name="notif_stop">STOP</string>
+    <string name="notif_channel_name">Aktiivne sessioon</string>
+    <string name="notif_channel_description">Kuvatakse, kuni Problipi sessioon töötab</string>
+    <string name="notif_interval_random">Juhuslik 4–7 s</string>
+    <string name="notif_interval_5s">Iga 5 s</string>
+    <string name="notif_interval_10s">Iga 10 s</string>
+    <string name="notif_interval_15s">Iga 15 s</string>
+    <string name="notif_interval_20s">Iga 20 s</string>
+    <string name="notif_interval_30s">Iga 30 s</string>
+    <string name="notif_interval_pulse">Pulss 5 / 10–20 s</string>
+    <string name="notif_interval_manual">Käsitsi</string>
+    <string name="notif_pool_random">Juhuslik valik</string>
+    <string name="notif_sound_fallback">Bliip</string>
+
+    <string name="widget_status_off">VÄLJAS</string>
+    <string name="widget_status_starting">KÄIVITUB</string>
+    <string name="widget_status_running">TÖÖTAB</string>
+    <string name="widget_status_error">VIGA</string>
+    <string name="widget_button_start">START</string>
+    <string name="widget_button_stop">STOP</string>
+    <string name="widget_description">Käivita või peata Problipi sessioon avakuvalt.</string>
+
+    <string name="help_a11y">Abi</string>
+    <string name="help_title">ABI</string>
+    <string name="help_quick_start">KIIRE ALUSTAMINE</string>
+    <string name="help_qs_volume">• Vali helitugevus.</string>
+    <string name="help_qs_interval">• Vali intervall.</string>
+    <string name="help_qs_sounds">• Vali helid.</string>
+    <string name="help_qs_start">• Vajuta START.</string>
+    <string name="help_qs_minimize">• MINIMEERI viib Problipi taustale, sessiooni peatamata.</string>
+    <string name="help_qs_exit">• VÄLJU peatab sessiooni ja sulgeb rakenduse.</string>
+    <string name="help_intervals">INTERVALLID</string>
+    <string name="help_intervals_body">• 4-7 — juhuslikud sekundid helide vahel.\n• 5 / 10 / 15 / 20 / 30 — fikseeritud intervallid.\n• PULSS — iga 5 s, vaheldumisi juhuslike 10-20 s.\n• KÄSITSI — oma ALATES ja KUNI sekundid. (premium)</string>
+    <string name="help_premium">PREMIUM / PROOV</string>
+    <string name="help_premium_body">• Premiumi sisu saab proovida 5 minutit.\n• Proovid ei uuene automaatselt.\n• Uue proovi saab käsitsi alustada igal ajal.\n• Ost on jäädav ja ei aegu.</string>
+    <string name="help_background">TAUST</string>
+    <string name="help_background_body">• Taasesituse ajal näitab Problip püsivat märguannet.\n• Märguanne STOP nupp peatab taasesituse ilma rakendust avamata.</string>
+    <string name="help_tips">NÄPUNÄIDED</string>
+    <string name="help_tips_body">• Vähenda helitugevus enne ekraani lukustamist.\n• Vidin käivitab ja peatab sessiooni avakuvalt.\n• Pärast proovi lõppu jäävad teema ja helid valituks.</string>
+    <string name="help_faq">KÜSIMUSED</string>
+    <string name="help_faq_notif_q">Miks on märguanne olemas?</string>
+    <string name="help_faq_notif_a">Android nõuab seda taustases ja seal on STOP nupp.</string>
+    <string name="help_faq_minimize_q">Kas MINIMEERI peatab Problipi?</string>
+    <string name="help_faq_minimize_a">Ei.</string>
+    <string name="help_faq_exit_q">Kas VÄLJU peatab Problipi?</string>
+    <string name="help_faq_exit_a">Jah.</string>
+    <string name="help_faq_renew_q">Kas proovid uuenevad automaatselt?</string>
+    <string name="help_faq_renew_a">Ei.</string>
+    <string name="help_faq_expire_q">Kas ostud aeguvad?</string>
+    <string name="help_faq_expire_a">Ei.</string>
+    <string name="help_faq_theme_q">Miks premiumi teema läks tagasi Golden Default juurde?</string>
+    <string name="help_faq_theme_a">Ajutine ligipääs aegus.</string>
+</resources>

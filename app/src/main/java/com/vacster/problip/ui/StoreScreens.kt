@@ -24,12 +24,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vacster.problip.R
 import com.vacster.problip.audio.SoundCatalog
 import com.vacster.problip.billing.ProductCatalog
 import com.vacster.problip.theme.ThemeCatalog
@@ -56,8 +58,8 @@ fun SoundsScreen(
 
     val effectivePool =
         SoundCatalog.playableSelection(settings.selectedSounds, owned, access.grantedIds)
-    StoreScaffold(title = "SOUNDS", onBack = onBack) {
-        SectionLabel("SELECT YOUR SOUND POOL")
+    StoreScaffold(title = stringResource(R.string.sounds_title), onBack = onBack) {
+        SectionLabel(stringResource(R.string.select_sound_pool))
         SoundCatalog.all.forEach { entry ->
             val price = products[entry.id]?.formattedPrice
             val state =
@@ -77,13 +79,13 @@ fun SoundsScreen(
                     multiple = true,
                     label =
                         if (granted)
-                            trialLabel(
+                            accessLabel(
                                 free = entry.free,
                                 owned = entry.id in owned,
                                 developerAccess = access.developerAccess,
                                 expiryMillis = trialExpiries[entry.id],
                                 nowMillis = now,
-                            ) ?: "INCLUDED"
+                            )?.text() ?: stringResource(R.string.included_label)
                         else null,
                     onSelect = { viewModel.toggleSound(entry.id) },
                 )
@@ -93,7 +95,11 @@ fun SoundsScreen(
                         price = price,
                         actionName = entry.displayName,
                         trial =
-                            if (!granted && state != StoreItemState.PENDING) "TRY 5 MIN" else null,
+                            if (!granted && state != StoreItemState.PENDING) {
+                                stringResource(R.string.try_5_min)
+                            } else {
+                                null
+                            },
                         onTrial = { viewModel.trySound(entry.id) },
                         onClick = { onPurchaseRequested(entry.id) },
                     )
@@ -141,16 +147,16 @@ fun ThemesScreen(
     // Classic selected here without any Activity restart.
     val effectiveTheme = ThemeCatalog.effective(settings.themeId, ownsPack, access.grantedIds).id
 
-    StoreScaffold(title = "THEMES", onBack = onBack) {
-        SectionLabel("CUSTOMIZATION PACK")
+    StoreScaffold(title = stringResource(R.string.themes_title), onBack = onBack) {
+        SectionLabel(stringResource(R.string.customization_pack))
         StoreRow(
-            name = "All extra palettes + Manual & Pulse Interval",
+            name = stringResource(R.string.pack_description),
             state = packState,
             price = packPrice,
             onClick = { onPurchaseRequested(ProductCatalog.THEME_PACK) },
         )
 
-        SectionLabel("SELECT OR TRY A PALETTE")
+        SectionLabel(stringResource(R.string.select_palette))
         Column(
             modifier = Modifier.selectableGroup(),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -160,13 +166,13 @@ fun ThemesScreen(
                     name = entry.displayName,
                     selected = entry.id == effectiveTheme,
                     label =
-                        trialLabel(
+                        accessLabel(
                             free = entry.free,
                             owned = ownsPack,
                             developerAccess = access.developerAccess,
                             expiryMillis = trialExpiries[entry.id],
                             nowMillis = now,
-                        ) ?: "INCLUDED",
+                        )?.text() ?: stringResource(R.string.included_label),
                     onSelect = { viewModel.setTheme(entry.id) },
                 )
             }
@@ -187,7 +193,7 @@ internal fun StoreScaffold(title: String, onBack: () -> Unit, content: @Composab
     ) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "< BACK",
+                text = stringResource(R.string.back_label),
                 color = P.Gold,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 13.sp,
@@ -222,7 +228,7 @@ private fun StoreRow(
     onTrial: () -> Unit = {},
 ) {
     val buyable = state == StoreItemState.PURCHASABLE
-    val label = storeItemLabel(state, price)
+    val labelRes = storeItemLabelRes(state, price)
     val feedback = clickFeedback()
     Column(
         modifier = Modifier.fillMaxWidth().background(P.Surface).padding(8.dp),
@@ -249,7 +255,7 @@ private fun StoreRow(
                             .border(1.dp, P.Edge)
                             .clickable(
                                 role = Role.Button,
-                                onClickLabel = "Try $actionName for five minutes",
+                                onClickLabel = stringResource(R.string.store_try_a11y, actionName),
                             ) {
                                 feedback()
                                 onTrial()
@@ -266,7 +272,7 @@ private fun StoreRow(
                     )
                 }
             }
-            if (label != null) {
+            if (buyable || labelRes != null) {
                 Box(
                     modifier =
                         Modifier.weight(1f)
@@ -275,7 +281,7 @@ private fun StoreRow(
                             .clickable(
                                 enabled = buyable,
                                 role = Role.Button,
-                                onClickLabel = "Buy $actionName",
+                                onClickLabel = stringResource(R.string.store_buy_a11y, actionName),
                             ) {
                                 onClick()
                             }
@@ -283,7 +289,11 @@ private fun StoreRow(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        if (buyable) "BUY $label" else label,
+                        if (buyable) {
+                            stringResource(R.string.store_buy_format, price.orEmpty())
+                        } else {
+                            stringResource(labelRes!!)
+                        },
                         color = if (buyable) P.ActionText else P.TextDim,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
@@ -372,18 +382,18 @@ private fun SelectionRow(
 
 /** Store error plus retry; purchases are restored automatically on every resume. */
 @Composable
-private fun StoreFooter(storeError: String?, onRetry: () -> Unit) {
+private fun StoreFooter(storeError: Int?, onRetry: () -> Unit) {
     if (storeError != null) {
         Text(
-            text = storeError,
+            text = stringResource(storeError),
             color = P.Danger,
             fontFamily = FontFamily.Monospace,
             fontSize = 12.sp,
         )
     }
-    BigButton(text = "RETRY STORE", onClick = onRetry)
+    BigButton(text = stringResource(R.string.retry_store), onClick = onRetry)
     Text(
-        text = "Purchases are restored from your Google account automatically.",
+        text = stringResource(R.string.purchases_restored_hint),
         color = P.TextDim,
         fontFamily = FontFamily.Monospace,
         fontSize = 11.sp,

@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Problip" parent="android:Theme.Material.NoActionBar">
+    <!-- AppCompatActivity requires an AppCompat descendant; the window colours
+         stay framework attributes so the dark Wintage shell is unchanged. -->
+    <style name="Theme.Problip" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowBackground">@color/problip_bg</item>
         <item name="android:statusBarColor">@color/problip_bg</item>
         <item name="android:navigationBarColor">@color/problip_bg</item>

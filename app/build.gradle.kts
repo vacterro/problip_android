@@ -16,6 +16,16 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+
+        // Packaged locales stay the supported set, so library translations cannot
+        // make Android Settings advertise languages Problip does not ship.
+        resourceConfigurations += listOf("en", "ru", "et", "ja")
+    }
+
+    androidResources {
+        // AGP generates the locale config from res/ + resources.properties;
+        // no manual locale_config.xml alongside it.
+        generateLocaleConfig = true
     }
 
     buildTypes {
@@ -57,6 +67,7 @@ dependencies {
     }
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.datastore.preferences)

@@ -1,8 +1,159 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Brand and widget shell (locale-independent) -->
     <string name="app_name">Problip</string>
     <string name="widget_title">PROBLIP</string>
+
+    <!-- Session status -->
+    <string name="status_off">OFF</string>
+    <string name="status_starting">STARTING</string>
+    <string name="status_running">RUNNING</string>
+    <string name="status_error">ERROR</string>
+
+    <!-- Primary actions -->
+    <string name="action_start">START</string>
+    <string name="action_stop">STOP</string>
+    <string name="action_minimize">MINIMIZE</string>
+    <string name="action_minimize_short">MIN</string>
+    <string name="action_exit">EXIT</string>
+    <string name="ok">OK</string>
+    <string name="developer_label">DEV</string>
+
+    <!-- Main screen -->
+    <string name="volume_label">VOLUME</string>
+    <string name="volume_label_short">VOL</string>
+    <string name="volume_percent">%1$d%%</string>
+    <string name="interval_label">INTERVAL</string>
+    <string name="sound_label">SOUND</string>
+    <string name="themes_label">THEMES</string>
+    <string name="themes_label_short">THEME</string>
+    <string name="settings_label">SETTINGS</string>
+    <string name="settings_label_short">SET</string>
+    <string name="interval_random">4-7</string>
+    <string name="interval_5s">5</string>
+    <string name="interval_10s">10</string>
+    <string name="interval_15s">15</string>
+    <string name="interval_20s">20</string>
+    <string name="interval_30s">30</string>
+    <string name="interval_pulse">PULSE</string>
+    <string name="interval_manual">MANUAL</string>
+    <string name="pulse_hint">5s / 10-20s</string>
+    <string name="manual_from">FROM</string>
+    <string name="manual_to">TO</string>
+    <string name="seconds_suffix">s</string>
+
+    <plurals name="sounds_selected">
+        <item quantity="one">%d sound selected</item>
+        <item quantity="other">%d sounds selected</item>
+    </plurals>
+    <plurals name="sounds_selected_short">
+        <item quantity="one">%d sound</item>
+        <item quantity="other">%d sounds</item>
+    </plurals>
+
+    <!-- Access labels -->
+    <string name="owned_label">OWNED</string>
+    <string name="included_label">INCLUDED</string>
+    <string name="trial_format">TRIAL %1$s</string>
+    <string name="try_5_min">TRY 5 MIN</string>
+    <string name="remaining_format">%1$s remaining</string>
+    <string name="developer_unlocked_title">DEVELOPER ACCESS UNLOCKED</string>
+    <string name="developer_unlocked_body">7 DAYS OF PREMIUM ACCESS</string>
+
+    <!-- Session errors (resolved by the service) -->
+    <string name="error_sound_load">Sound could not be loaded</string>
+    <string name="error_playback">Playback failed</string>
+
+    <!-- Settings -->
+    <string name="settings_title">SETTINGS</string>
+    <string name="temporary_access">TEMPORARY ACCESS</string>
+    <string name="developer_access">Developer Access</string>
+    <string name="reset_temporary_access">RESET TEMPORARY ACCESS</string>
+    <string name="reset_temporary_access_hint">Clears Developer Access and all five-minute trials. Purchases are never removed.</string>
+    <string name="language_label">LANGUAGE</string>
+    <string name="language_value_system">SYSTEM</string>
+    <string name="language_option_system">System Default</string>
+
+    <!-- Sounds screen -->
+    <string name="sounds_title">SOUNDS</string>
+    <string name="select_sound_pool">SELECT YOUR SOUND POOL</string>
+    <string name="back_label">&lt; BACK</string>
+    <string name="store_try_a11y">Try %1$s for five minutes</string>
+    <string name="store_buy_a11y">Buy %1$s</string>
+    <string name="store_buy_format">BUY %1$s</string>
+    <string name="retry_store">RETRY STORE</string>
+    <string name="purchases_restored_hint">Purchases are restored from your Google account automatically.</string>
+
+    <!-- Themes screen -->
+    <string name="themes_title">THEMES</string>
+    <string name="customization_pack">CUSTOMIZATION PACK</string>
+    <string name="pack_description">All extra palettes + Manual &amp; Pulse Interval</string>
+    <string name="select_palette">SELECT OR TRY A PALETTE</string>
+    <string name="store_pending">PENDING</string>
+    <string name="store_loading">LOADING</string>
+    <string name="store_unavailable">UNAVAILABLE</string>
+
+    <!-- Store errors -->
+    <string name="error_store_unavailable">Google Play store is unavailable right now.</string>
+    <string name="error_purchase_query">Could not check your purchases with Google Play.</string>
+    <string name="error_price_query">Could not load store prices from Google Play.</string>
+    <string name="error_prices_loading">Store prices are still loading. Try again in a moment.</string>
+    <string name="error_purchase_screen">Google Play could not open the purchase screen.</string>
+
+    <!-- Notification -->
+    <string name="notif_title">Problip running</string>
+    <string name="notif_stop">STOP</string>
+    <string name="notif_channel_name">Active session</string>
+    <string name="notif_channel_description">Shown while a Problip session is running</string>
+    <string name="notif_interval_random">Random 4–7 sec</string>
+    <string name="notif_interval_5s">Every 5 sec</string>
+    <string name="notif_interval_10s">Every 10 sec</string>
+    <string name="notif_interval_15s">Every 15 sec</string>
+    <string name="notif_interval_20s">Every 20 sec</string>
+    <string name="notif_interval_30s">Every 30 sec</string>
+    <string name="notif_interval_pulse">Pulse 5 / 10–20 sec</string>
+    <string name="notif_interval_manual">Manual</string>
+    <string name="notif_pool_random">Random pool</string>
+    <string name="notif_sound_fallback">Blip</string>
+
+    <!-- Widget -->
     <string name="widget_status_off">OFF</string>
-    <string name="widget_button_start">[ START ]</string>
+    <string name="widget_status_starting">STARTING</string>
+    <string name="widget_status_running">RUNNING</string>
+    <string name="widget_status_error">ERROR</string>
+    <string name="widget_button_start">START</string>
+    <string name="widget_button_stop">STOP</string>
     <string name="widget_description">Start or stop a Problip session from the home screen.</string>
+
+    <!-- Help -->
+    <string name="help_a11y">Help</string>
+    <string name="help_title">HELP</string>
+    <string name="help_quick_start">QUICK START</string>
+    <string name="help_qs_volume">• Choose the volume.</string>
+    <string name="help_qs_interval">• Choose the interval.</string>
+    <string name="help_qs_sounds">• Choose the sounds.</string>
+    <string name="help_qs_start">• Press START.</string>
+    <string name="help_qs_minimize">• MINIMIZE backgrounds Problip without stopping it.</string>
+    <string name="help_qs_exit">• EXIT stops the session and closes the app.</string>
+    <string name="help_intervals">INTERVALS</string>
+    <string name="help_intervals_body">• 4-7 — random seconds between blips.\n• 5 / 10 / 15 / 20 / 30 — fixed presets.\n• PULSE — every 5 sec, alternating with a random 10-20 sec.\n• MANUAL — your own FROM and TO seconds. (premium)</string>
+    <string name="help_premium">PREMIUM / TRIAL</string>
+    <string name="help_premium_body">• Premium content can be tried for 5 minutes.\n• Trials do not renew automatically.\n• A new trial can be started manually at any time.\n• A purchase is permanent and never expires.</string>
+    <string name="help_background">BACKGROUND</string>
+    <string name="help_background_body">• While playing, Problip shows a permanent notification.\n• The notification STOP button stops playback without reopening the app.</string>
+    <string name="help_tips">TIPS</string>
+    <string name="help_tips_body">• Turn the volume down before locking the screen.\n• The widget starts and stops a session from the home screen.\n• Themes and sounds stay selected after a trial ends.</string>
+    <string name="help_faq">FAQ</string>
+    <string name="help_faq_notif_q">Why is there a notification?</string>
+    <string name="help_faq_notif_a">Android requires it for background playback, and it carries the STOP button.</string>
+    <string name="help_faq_minimize_q">Does MINIMIZE stop Problip?</string>
+    <string name="help_faq_minimize_a">No.</string>
+    <string name="help_faq_exit_q">Does EXIT stop Problip?</string>
+    <string name="help_faq_exit_a">Yes.</string>
+    <string name="help_faq_renew_q">Do trials renew automatically?</string>
+    <string name="help_faq_renew_a">No.</string>
+    <string name="help_faq_expire_q">Do purchases expire?</string>
+    <string name="help_faq_expire_a">No.</string>
+    <string name="help_faq_theme_q">Why did a premium theme return to Golden Default?</string>
+    <string name="help_faq_theme_a">Its temporary access expired.</string>
 </resources>

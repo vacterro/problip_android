@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Problip</string>
+    <string name="widget_title">PROBLIP</string>
+
+    <string name="status_off">ВЫКЛ</string>
+    <string name="status_starting">ЗАПУСК</string>
+    <string name="status_running">РАБОТАЕТ</string>
+    <string name="status_error">ОШИБКА</string>
+
+    <string name="action_start">СТАРТ</string>
+    <string name="action_stop">СТОП</string>
+    <string name="action_minimize">СВЕРНУТЬ</string>
+    <string name="action_minimize_short">СВЕРН</string>
+    <string name="action_exit">ВЫХОД</string>
+    <string name="ok">OK</string>
+    <string name="developer_label">DEV</string>
+
+    <string name="volume_label">ГРОМКОСТЬ</string>
+    <string name="volume_label_short">ГРОМК</string>
+    <string name="volume_percent">%1$d%%</string>
+    <string name="interval_label">ИНТЕРВАЛ</string>
+    <string name="sound_label">ЗВУК</string>
+    <string name="themes_label">ТЕМЫ</string>
+    <string name="themes_label_short">ТЕМЫ</string>
+    <string name="settings_label">НАСТРОЙКИ</string>
+    <string name="settings_label_short">НАСТР</string>
+    <string name="interval_random">4-7</string>
+    <string name="interval_5s">5</string>
+    <string name="interval_10s">10</string>
+    <string name="interval_15s">15</string>
+    <string name="interval_20s">20</string>
+    <string name="interval_30s">30</string>
+    <string name="interval_pulse">ПУЛЬС</string>
+    <string name="interval_manual">РУЧНОЙ</string>
+    <string name="pulse_hint">5с / 10-20с</string>
+    <string name="manual_from">ОТ</string>
+    <string name="manual_to">ДО</string>
+    <string name="seconds_suffix">с</string>
+
+    <plurals name="sounds_selected">
+        <item quantity="one">%d звук выбран</item>
+        <item quantity="few">%d звука выбрано</item>
+        <item quantity="many">%d звуков выбрано</item>
+        <item quantity="other">%d звуков выбрано</item>
+    </plurals>
+    <plurals name="sounds_selected_short">
+        <item quantity="one">%d звук</item>
+        <item quantity="few">%d звука</item>
+        <item quantity="many">%d звуков</item>
+        <item quantity="other">%d звуков</item>
+    </plurals>
+
+    <string name="owned_label">КУПЛЕНО</string>
+    <string name="included_label">ВКЛЮЧЕНО</string>
+    <string name="trial_format">ПРОБА %1$s</string>
+    <string name="try_5_min">ПРОБА 5 МИН</string>
+    <string name="remaining_format">осталось %1$s</string>
+    <string name="developer_unlocked_title">ДОСТУП РАЗРАБОТЧИКА ОТКРЫТ</string>
+    <string name="developer_unlocked_body">7 ДНЕЙ ПРЕМИУМ-ДОСТУПА</string>
+
+    <string name="error_sound_load">Не удалось загрузить звук</string>
+    <string name="error_playback">Ошибка воспроизведения</string>
+
+    <string name="settings_title">НАСТРОЙКИ</string>
+    <string name="temporary_access">ВРЕМЕННЫЙ ДОСТУП</string>
+    <string name="developer_access">Доступ разработчика</string>
+    <string name="reset_temporary_access">СБРОСИТЬ ВРЕМЕННЫЙ ДОСТУП</string>
+    <string name="reset_temporary_access_hint">Отключает доступ разработчика и все пятиминутные пробы. Покупки не удаляются.</string>
+    <string name="language_label">ЯЗЫК</string>
+    <string name="language_value_system">СИСТЕМА</string>
+    <string name="language_option_system">Системный по умолчанию</string>
+
+    <string name="sounds_title">ЗВУКИ</string>
+    <string name="select_sound_pool">ВЫБЕРИТЕ ПУЛ ЗВУКОВ</string>
+    <string name="back_label">&lt; НАЗАД</string>
+    <string name="store_try_a11y">Попробовать «%1$s» на 5 минут</string>
+    <string name="store_buy_a11y">Купить «%1$s»</string>
+    <string name="store_buy_format">КУПИТЬ %1$s</string>
+    <string name="retry_store">ПОВТОРИТЬ МАГАЗИН</string>
+    <string name="purchases_restored_hint">Покупки восстанавливаются из вашего аккаунта Google автоматически.</string>
+
+    <string name="themes_title">ТЕМЫ</string>
+    <string name="customization_pack">ПАКЕТ КАСТОМИЗАЦИИ</string>
+    <string name="pack_description">Все доп. палитры + Ручной и Пульсовый интервал</string>
+    <string name="select_palette">ВЫБЕРИТЕ ИЛИ ПОПРОБУЙТЕ ПАЛИТРУ</string>
+    <string name="store_pending">ОЖИДАЕТСЯ</string>
+    <string name="store_loading">ЗАГРУЗКА</string>
+    <string name="store_unavailable">НЕДОСТУПНО</string>
+
+    <string name="error_store_unavailable">Google Play сейчас недоступен.</string>
+    <string name="error_purchase_query">Не удалось проверить покупки в Google Play.</string>
+    <string name="error_price_query">Не удалось загрузить цены из Google Play.</string>
+    <string name="error_prices_loading">Цены ещё загружаются. Попробуйте позже.</string>
+    <string name="error_purchase_screen">Google Play не смог открыть экран покупки.</string>
+
+    <string name="notif_title">Problip работает</string>
+    <string name="notif_stop">СТОП</string>
+    <string name="notif_channel_name">Активная сессия</string>
+    <string name="notif_channel_description">Показывается, пока выполняется сессия Problip</string>
+    <string name="notif_interval_random">Случайно 4–7 с</string>
+    <string name="notif_interval_5s">Каждые 5 с</string>
+    <string name="notif_interval_10s">Каждые 10 с</string>
+    <string name="notif_interval_15s">Каждые 15 с</string>
+    <string name="notif_interval_20s">Каждые 20 с</string>
+    <string name="notif_interval_30s">Каждые 30 с</string>
+    <string name="notif_interval_pulse">Пульс 5 / 10–20 с</string>
+    <string name="notif_interval_manual">Ручной</string>
+    <string name="notif_pool_random">Случайный пул</string>
+    <string name="notif_sound_fallback">Блип</string>
+
+    <string name="widget_status_off">ВЫКЛ</string>
+    <string name="widget_status_starting">ЗАПУСК</string>
+    <string name="widget_status_running">РАБОТАЕТ</string>
+    <string name="widget_status_error">ОШИБКА</string>
+    <string name="widget_button_start">СТАРТ</string>
+    <string name="widget_button_stop">СТОП</string>
+    <string name="widget_description">Запуск и остановка сессии Problip с домашнего экрана.</string>
+
+    <string name="help_a11y">Справка</string>
+    <string name="help_title">СПРАВКА</string>
+    <string name="help_quick_start">БЫСТРЫЙ СТАРТ</string>
+    <string name="help_qs_volume">• Выберите громкость.</string>
+    <string name="help_qs_interval">• Выберите интервал.</string>
+    <string name="help_qs_sounds">• Выберите звуки.</string>
+    <string name="help_qs_start">• Нажмите СТАРТ.</string>
+    <string name="help_qs_minimize">• СВЕРНУТЬ убирает Problip в фон, не останавливая его.</string>
+    <string name="help_qs_exit">• ВЫХОД останавливает сессию и закрывает приложение.</string>
+    <string name="help_intervals">ИНТЕРВАЛЫ</string>
+    <string name="help_intervals_body">• 4-7 — случайные секунды между сигналами.\n• 5 / 10 / 15 / 20 / 30 — фиксированные интервалы.\n• ПУЛЬС — каждые 5 с, чередуясь со случайными 10-20 с.\n• РУЧНОЙ — свои секунды ОТ и ДО. (премиум)</string>
+    <string name="help_premium">ПРЕМИУМ / ПРОБА</string>
+    <string name="help_premium_body">• Премиум-контент можно пробовать 5 минут.\n• Пробы не продлеваются автоматически.\n• Новую пробу можно запустить вручную в любой момент.\n• Покупка бессрочна и не истекает.</string>
+    <string name="help_background">ФОН</string>
+    <string name="help_background_body">• Во время воспроизведения Problip показывает постоянное уведомление.\n• Кнопка СТОП в уведомлении останавливает воспроизведение без открытия приложения.</string>
+    <string name="help_tips">СОВЕТЫ</string>
+    <string name="help_tips_body">• Убавьте громкость перед блокировкой экрана.\n• Виджет запускает и останавливает сессию с домашнего экрана.\n• После конца пробы тема и звуки остаются выбранными.</string>
+    <string name="help_faq">ВОПРОСЫ И ОТВЕТЫ</string>
+    <string name="help_faq_notif_q">Зачем нужно уведомление?</string>
+    <string name="help_faq_notif_a">Android требует его для фоновой работы, и в нём есть кнопка СТОП.</string>
+    <string name="help_faq_minimize_q">СВЕРНУТЬ останавливает Problip?</string>
+    <string name="help_faq_minimize_a">Нет.</string>
+    <string name="help_faq_exit_q">ВЫХОД останавливает Problip?</string>
+    <string name="help_faq_exit_a">Да.</string>
+    <string name="help_faq_renew_q">Пробы продлеваются автоматически?</string>
+    <string name="help_faq_renew_a">Нет.</string>
+    <string name="help_faq_expire_q">Покупки истекают?</string>
+    <string name="help_faq_expire_a">Нет.</string>
+    <string name="help_faq_theme_q">Почему премиум-тема вернулась к Golden Default?</string>
+    <string name="help_faq_theme_a">Временный доступ к ней истёк.</string>
+</resources>

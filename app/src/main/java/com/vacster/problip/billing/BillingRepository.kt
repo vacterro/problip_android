@@ -16,6 +16,7 @@ import com.android.billingclient.api.QueryPurchasesParams
 import com.android.billingclient.api.acknowledgePurchase
 import com.android.billingclient.api.queryProductDetails
 import com.android.billingclient.api.queryPurchasesAsync
+import com.vacster.problip.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -78,9 +79,12 @@ class BillingRepository(
     private val _products = MutableStateFlow<Map<String, ProductUi>>(emptyMap())
     val products: StateFlow<Map<String, ProductUi>> = _products.asStateFlow()
 
-    /** Last store failure, user-readable. Null once cleared or after a success. */
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
+    /**
+     * Last store failure as a string resource id; the UI resolves the text in
+     * its own locale. Null once cleared or after a success.
+     */
+    private val _error = MutableStateFlow<Int?>(null)
+    val error: StateFlow<Int?> = _error.asStateFlow()
 
     fun clearError() {
         _error.value = null
@@ -140,7 +144,7 @@ class BillingRepository(
                     queryProducts()
                 } else {
                     _connection.value = BillingConnection.DISCONNECTED
-                    _error.value = "Google Play store is unavailable right now."
+                    _error.value = R.string.error_store_unavailable
                 }
             }
 
@@ -191,8 +195,7 @@ class BillingRepository(
                     _error.compareAndSet(PURCHASE_QUERY_FAILED, null)
                 } else {
                     _error.value = PURCHASE_QUERY_FAILED
-                }
-            }
+                }            }
         }
     }
 
@@ -243,7 +246,7 @@ class BillingRepository(
     fun purchase(activity: Activity, productId: String) {
         val detail = detailsById[productId]
         if (detail == null) {
-            _error.value = "Store prices are still loading. Try again in a moment."
+            _error.value = R.string.error_prices_loading
             return
         }
         val flowParams = BillingFlowParams.newBuilder()
@@ -257,7 +260,7 @@ class BillingRepository(
             .build()
         val result = client.launchBillingFlow(activity, flowParams)
         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-            _error.value = "Google Play could not open the purchase screen."
+            _error.value = R.string.error_purchase_screen
         } else {
             _error.value = null
         }
@@ -291,7 +294,7 @@ class BillingRepository(
 
     private companion object {
         /** Kept as constants so a successful query can retract exactly its own failure. */
-        const val PURCHASE_QUERY_FAILED = "Could not check your purchases with Google Play."
-        const val PRICE_QUERY_FAILED = "Could not load store prices from Google Play."
+        val PURCHASE_QUERY_FAILED = R.string.error_purchase_query
+        val PRICE_QUERY_FAILED = R.string.error_price_query
     }
 }

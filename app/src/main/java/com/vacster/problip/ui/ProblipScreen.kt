@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.BasicTextField
@@ -47,7 +48,10 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
@@ -65,6 +69,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.vacster.problip.R
 import com.vacster.problip.audio.SoundCatalog
 import com.vacster.problip.core.IntervalMode
 import com.vacster.problip.core.PremiumInterval
@@ -190,6 +195,7 @@ fun ProblipScreen(
     onOpenThemes: () -> Unit,
     onOpenSettings: () -> Unit,
     onMinimize: () -> Unit,
+    onExit: () -> Unit,
 ) {
     val settings by viewModel.settings.collectAsState()
     val state by viewModel.state.collectAsState()
@@ -220,8 +226,12 @@ fun ProblipScreen(
     val gesture = remember { DeveloperGesture() }
     val gestureScope = rememberCoroutineScope()
     var developerUnlocked by remember { mutableStateOf(false) }
+    var helpOpen by remember { mutableStateOf(false) }
     val feedback = clickFeedback()
     val view = LocalView.current
+
+    val themesA11y = stringResource(R.string.themes_label)
+    val settingsA11y = stringResource(R.string.settings_label)
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize().background(P.Bg)) {
         val compact = maxHeight < 560.dp || LocalDensity.current.fontScale > 1.15f
@@ -273,7 +283,7 @@ fun ProblipScreen(
                 ) {
                     if (access.developerAccess) {
                         Text(
-                            text = DEVELOPER_LABEL,
+                            text = stringResource(R.string.developer_label),
                             color = P.Gold,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 10.sp,
@@ -282,6 +292,7 @@ fun ProblipScreen(
                         )
                     }
                     StatusText(state)
+                    HelpButton(onClick = { helpOpen = true })
                 }
             }
 
@@ -299,7 +310,11 @@ fun ProblipScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        SectionLabel(if (narrowLandscape) "VOL" else "VOLUME")
+                        SectionLabel(
+                            stringResource(
+                                if (narrowLandscape) R.string.volume_label_short else R.string.volume_label
+                            )
+                        )
                         // A drag emits ~60 values per second and every one of them used to be
                         // a DataStore write. The thumb now moves on local state and the gain
                         // is persisted once, on release. Keyed on the persisted value so an
@@ -316,7 +331,7 @@ fun ProblipScreen(
                             colors = sliderColors(),
                         )
                         Text(
-                            text = "$dragPercent%",
+                            text = stringResource(R.string.volume_percent, dragPercent),
                             color = P.TextMain,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 14.sp,
@@ -332,7 +347,7 @@ fun ProblipScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            SectionLabel("INTERVAL")
+                            SectionLabel(stringResource(R.string.interval_label))
                             val featureId =
                                 when (effectiveMode) {
                                     IntervalMode.PULSE -> TrialAccess.FEATURE_PULSE_INTERVAL
@@ -353,7 +368,7 @@ fun ProblipScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 row.forEach { mode ->
                                     PresetButton(
-                                        label = mode.label(),
+                                        label = stringResource(mode.labelRes()),
                                         selected = effectiveMode == mode,
                                         onClick = { viewModel.setIntervalMode(mode) },
                                         modifier = Modifier.weight(1f).height(presetHeight),
@@ -370,7 +385,7 @@ fun ProblipScreen(
                         ) {
                             if (effectiveMode == IntervalMode.PULSE) {
                                 Text(
-                                    text = "5s / 10-20s",
+                                    text = stringResource(R.string.pulse_hint),
                                     color = P.TextDim,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 11.sp,
@@ -402,34 +417,43 @@ fun ProblipScreen(
                                     }
                                 }
                                 .minOrNull()
+                        val poolCount = effectivePool.size
                         SoundSummaryRow(
                             summary =
-                                if (effectivePool.size == 1) {
+                                if (poolCount == 1) {
                                     SoundCatalog.byId(effectivePool.first())!!.displayName
                                 } else {
-                                    if (narrowLandscape) "${effectivePool.size} sounds"
-                                    else "${effectivePool.size} sounds selected"
+                                    pluralStringResource(
+                                        if (narrowLandscape) R.plurals.sounds_selected_short
+                                        else R.plurals.sounds_selected,
+                                        poolCount,
+                                        poolCount,
+                                    )
                                 },
                             label =
-                                trialLabel(
+                                accessLabel(
                                     free = premiumSounds.isEmpty(),
                                     owned = premiumSounds.all { it.id in owned },
                                     developerAccess = access.developerAccess,
                                     expiryMillis = firstExpiry,
                                     nowMillis = now,
-                                ),
+                                )?.text(),
                             onClick = onOpenSounds,
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
                             NavRow(
-                                if (narrowLandscape) "THEME" else "THEMES",
+                                stringResource(
+                                    if (narrowLandscape) R.string.themes_label_short else R.string.themes_label
+                                ),
                                 onOpenThemes,
-                                Modifier.weight(1f).semantics { contentDescription = "THEMES" },
+                                Modifier.weight(1f).semantics { contentDescription = themesA11y },
                             )
                             NavRow(
-                                if (narrowLandscape) "SET" else "SETTINGS",
+                                stringResource(
+                                    if (narrowLandscape) R.string.settings_label_short else R.string.settings_label
+                                ),
                                 onOpenSettings,
-                                Modifier.weight(1f).semantics { contentDescription = "SETTINGS" },
+                                Modifier.weight(1f).semantics { contentDescription = settingsA11y },
                             )
                         }
                     }
@@ -447,28 +471,59 @@ fun ProblipScreen(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    MinimizeButton(onClick = onMinimize, modifier = Modifier.weight(1f))
-                    BigButton(
-                        text = if (running) "STOP" else "START",
-                        modifier = Modifier.weight(1.3f),
-                        onClick = {
-                            // The armed chord consumes this tap: it must neither start nor
-                            // stop the session.
-                            if (gesture.consumeIfArmedAndTitleStillHeld()) {
+                // Adaptive placement, same controls in both shapes: compact
+                // viewports put MINIMIZE, EXIT and START/STOP on one line, roomy
+                // ones give the primary button its own full-width row.
+                if (compact) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        MinimizeButton(onClick = onMinimize, modifier = Modifier.weight(1f), compact = true)
+                        ExitButton(onClick = onExit, modifier = Modifier.weight(1f), compact = true)
+                        StartStopButton(
+                            running = running,
+                            modifier = Modifier.weight(1.5f),
+                            gesture = gesture,
+                            onDeveloperUnlocked = {
                                 viewModel.enableDeveloperAccess()
                                 developerUnlocked = true
                                 view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                            } else if (running) {
-                                feedback()
-                                viewModel.stop()
-                            } else {
+                            },
+                            onStart = {
                                 feedback()
                                 onStartRequested()
-                            }
+                            },
+                            onStop = {
+                                feedback()
+                                viewModel.stop()
+                            },
+                        )
+                    }
+                } else {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        MinimizeButton(onClick = onMinimize, modifier = Modifier.weight(1f), compact = false)
+                        ExitButton(onClick = onExit, modifier = Modifier.weight(1f), compact = false)
+                    }
+                    StartStopButton(
+                        running = running,
+                        modifier = Modifier.fillMaxWidth(),
+                        gesture = gesture,
+                        onDeveloperUnlocked = {
+                            viewModel.enableDeveloperAccess()
+                            developerUnlocked = true
+                            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        },
+                        onStart = {
+                            feedback()
+                            onStartRequested()
+                        },
+                        onStop = {
+                            feedback()
+                            viewModel.stop()
                         },
                     )
                 }
@@ -478,6 +533,72 @@ fun ProblipScreen(
 
     if (developerUnlocked) {
         DeveloperUnlockedDialog(onDismiss = { developerUnlocked = false })
+    }
+    if (helpOpen) {
+        HelpDialog(onDismiss = { helpOpen = false })
+    }
+}
+
+/**
+ * The dominant primary action. It is also the ONLY control that may confirm the
+ * hidden Developer Access chord: `?`, MINIMIZE and EXIT consume their taps as
+ * themselves, never as chord confirmations.
+ */
+@Composable
+private fun StartStopButton(
+    running: Boolean,
+    modifier: Modifier,
+    gesture: DeveloperGesture,
+    onDeveloperUnlocked: () -> Unit,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+) {
+    BigButton(
+        text = stringResource(if (running) R.string.action_stop else R.string.action_start),
+        modifier = modifier,
+        onClick = {
+            // The armed chord consumes this tap: it must neither start nor
+            // stop the session.
+            if (gesture.consumeIfArmedAndTitleStillHeld()) {
+                onDeveloperUnlocked()
+            } else if (running) {
+                onStop()
+            } else {
+                onStart()
+            }
+        },
+    )
+}
+
+/**
+ * Secondary header control: visually secondary, an adequate 44 dp target, and
+ * never part of the hidden Developer gesture — only START/STOP may confirm it.
+ */
+@Composable
+private fun HelpButton(onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val description = stringResource(R.string.help_a11y)
+    Box(
+        modifier =
+            Modifier.sizeIn(minWidth = 44.dp, minHeight = 44.dp)
+                .background(if (pressed) P.Compare else P.Surface)
+                .border(1.dp, P.Edge)
+                .clickable(interactionSource = interaction, indication = null, role = Role.Button) {
+                    onClick()
+                }
+                .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "?",
+            color = P.TextMain,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
+            lineHeight = 18.sp,
+            modifier = Modifier.clearAndSetSemantics {},
+        )
     }
 }
 
@@ -498,7 +619,7 @@ private fun IntervalTrialLabel(
     nowMillis: Long,
 ) {
     val label =
-        trialLabel(
+        accessLabel(
             free = false,
             owned = owned,
             developerAccess = developerAccess,
@@ -506,7 +627,7 @@ private fun IntervalTrialLabel(
             nowMillis = nowMillis,
         ) ?: return
     Text(
-        text = label,
+        text = label.text(),
         color = P.Gold,
         fontFamily = FontFamily.Monospace,
         fontSize = 10.sp,
@@ -529,13 +650,13 @@ private fun ManualIntervalEditor(fromSeconds: Int, toSeconds: Int, onCommit: (In
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         SecondsField(
-            label = "FROM",
+            label = stringResource(R.string.manual_from),
             value = fromText,
             onValueChange = { fromText = it.filter(Char::isDigit).take(4) },
             onCommit = commit,
         )
         SecondsField(
-            label = "TO",
+            label = stringResource(R.string.manual_to),
             value = toText,
             onValueChange = { toText = it.filter(Char::isDigit).take(4) },
             onCommit = commit,
@@ -592,7 +713,7 @@ private fun SecondsField(
                     .onFocusChanged { if (!it.isFocused) onCommit() },
         )
         Text(
-            text = "s",
+            text = stringResource(R.string.seconds_suffix),
             color = P.TextDim,
             fontFamily = FontFamily.Monospace,
             fontSize = 11.sp,
@@ -610,7 +731,7 @@ private fun DeveloperUnlockedDialog(onDismiss: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                text = "DEVELOPER ACCESS UNLOCKED",
+                text = stringResource(R.string.developer_unlocked_title),
                 color = P.ActionText,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold,
@@ -618,26 +739,26 @@ private fun DeveloperUnlockedDialog(onDismiss: () -> Unit) {
                 letterSpacing = 1.sp,
             )
             Text(
-                text = "7 DAYS OF PREMIUM ACCESS",
+                text = stringResource(R.string.developer_unlocked_body),
                 color = P.TextMain,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 12.sp,
             )
-            BigButton(text = "OK", onClick = onDismiss)
+            BigButton(text = stringResource(R.string.ok), onClick = onDismiss)
         }
     }
 }
 
-private fun IntervalMode.label(): String =
+private fun IntervalMode.labelRes(): Int =
     when (this) {
-        IntervalMode.RANDOM_4_7 -> "4-7"
-        IntervalMode.FIXED_5S -> "5"
-        IntervalMode.FIXED_10S -> "10"
-        IntervalMode.FIXED_15S -> "15"
-        IntervalMode.FIXED_20S -> "20"
-        IntervalMode.FIXED_30S -> "30"
-        IntervalMode.PULSE -> "PULSE"
-        IntervalMode.MANUAL -> "MANUAL"
+        IntervalMode.RANDOM_4_7 -> R.string.interval_random
+        IntervalMode.FIXED_5S -> R.string.interval_5s
+        IntervalMode.FIXED_10S -> R.string.interval_10s
+        IntervalMode.FIXED_15S -> R.string.interval_15s
+        IntervalMode.FIXED_20S -> R.string.interval_20s
+        IntervalMode.FIXED_30S -> R.string.interval_30s
+        IntervalMode.PULSE -> R.string.interval_pulse
+        IntervalMode.MANUAL -> R.string.interval_manual
     }
 
 @Composable
@@ -658,12 +779,21 @@ private fun StatusText(state: ProblipState) {
             }
         }
     }
-    val (text, color) =
+    val text =
+        stringResource(
+            when (state) {
+                ProblipState.STARTING -> R.string.status_starting
+                ProblipState.RUNNING -> R.string.status_running
+                ProblipState.ERROR -> R.string.status_error
+                ProblipState.STOPPED -> R.string.status_off
+            }
+        )
+    val color =
         when (state) {
-            ProblipState.STARTING -> "STARTING" to P.TextDim
-            ProblipState.RUNNING -> "RUNNING" to P.TextMain
-            ProblipState.ERROR -> "ERROR" to P.Danger
-            ProblipState.STOPPED -> "OFF" to P.TextDim
+            ProblipState.STARTING -> P.TextDim
+            ProblipState.RUNNING -> P.TextMain
+            ProblipState.ERROR -> P.Danger
+            ProblipState.STOPPED -> P.TextDim
         }
     Row(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -767,7 +897,7 @@ private fun SoundSummaryRow(summary: String, label: String?, onClick: () -> Unit
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                SectionLabel("SOUND")
+                SectionLabel(stringResource(R.string.sound_label))
                 if (label != null) {
                     Text(
                         text = label,
@@ -836,10 +966,11 @@ private fun NavRow(label: String, onClick: () -> Unit, modifier: Modifier) {
 /**
  * Secondary action: obvious and next to START/STOP, never hidden in a menu, and always spelled out
  * because an icon alone is ambiguous. Deliberately quieter than [BigButton] so the primary action
- * stays primary.
+ * stays primary. Tapping it while the title is held just minimizes — it can never confirm the
+ * Developer chord.
  */
 @Composable
-private fun MinimizeButton(onClick: () -> Unit, modifier: Modifier) {
+private fun MinimizeButton(onClick: () -> Unit, modifier: Modifier, compact: Boolean) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val feedback = clickFeedback()
@@ -856,7 +987,40 @@ private fun MinimizeButton(onClick: () -> Unit, modifier: Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "MINIMIZE",
+            text =
+                stringResource(
+                    if (compact) R.string.action_minimize_short else R.string.action_minimize
+                ),
+            color = P.TextMain,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 13.sp,
+            lineHeight = 16.sp,
+            letterSpacing = 1.sp,
+            maxLines = 1,
+        )
+    }
+}
+
+/** EXIT twins MINIMIZE at the same utility level; same visual weight, same quietness. */
+@Composable
+private fun ExitButton(onClick: () -> Unit, modifier: Modifier, compact: Boolean) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val feedback = clickFeedback()
+    Box(
+        modifier =
+            modifier
+                .height(48.dp)
+                .background(if (pressed) P.Compare else P.Surface)
+                .border(if (pressed) 2.dp else 1.dp, P.Edge)
+                .clickable(interactionSource = interaction, indication = null, role = Role.Button) {
+                    feedback()
+                    onClick()
+                },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.action_exit),
             color = P.TextMain,
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp,

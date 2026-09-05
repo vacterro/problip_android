@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Problip</string>
+    <string name="widget_title">PROBLIP</string>
+
+    <string name="status_off">オフ</string>
+    <string name="status_starting">開始中</string>
+    <string name="status_running">再生中</string>
+    <string name="status_error">エラー</string>
+
+    <string name="action_start">開始</string>
+    <string name="action_stop">停止</string>
+    <string name="action_minimize">最小化</string>
+    <string name="action_minimize_short">最小</string>
+    <string name="action_exit">終了</string>
+    <string name="ok">OK</string>
+    <string name="developer_label">DEV</string>
+
+    <string name="volume_label">音量</string>
+    <string name="volume_label_short">音量</string>
+    <string name="volume_percent">%1$d%%</string>
+    <string name="interval_label">間隔</string>
+    <string name="sound_label">サウンド</string>
+    <string name="themes_label">テーマ</string>
+    <string name="themes_label_short">テーマ</string>
+    <string name="settings_label">設定</string>
+    <string name="settings_label_short">設定</string>
+    <string name="interval_random">4-7</string>
+    <string name="interval_5s">5</string>
+    <string name="interval_10s">10</string>
+    <string name="interval_15s">15</string>
+    <string name="interval_20s">20</string>
+    <string name="interval_30s">30</string>
+    <string name="interval_pulse">パルス</string>
+    <string name="interval_manual">手動</string>
+    <string name="pulse_hint">5秒 / 10-20秒</string>
+    <string name="manual_from">開始</string>
+    <string name="manual_to">終了</string>
+    <string name="seconds_suffix">秒</string>
+
+    <plurals name="sounds_selected">
+        <item quantity="other">%d 個のサウンド選択中</item>
+    </plurals>
+    <plurals name="sounds_selected_short">
+        <item quantity="other">%d サウンド</item>
+    </plurals>
+
+    <string name="owned_label">購入済み</string>
+    <string name="included_label">同梱</string>
+    <string name="trial_format">試用 %1$s</string>
+    <string name="try_5_min">5分試用</string>
+    <string name="remaining_format">残り %1$s</string>
+    <string name="developer_unlocked_title">開発者アクセス解除</string>
+    <string name="developer_unlocked_body">プレミアム7日間</string>
+
+    <string name="error_sound_load">サウンドを読み込めませんでした</string>
+    <string name="error_playback">再生に失敗しました</string>
+
+    <string name="settings_title">設定</string>
+    <string name="temporary_access">期間限定アクセス</string>
+    <string name="developer_access">開発者アクセス</string>
+    <string name="reset_temporary_access">期間限定アクセスをリセット</string>
+    <string name="reset_temporary_access_hint">開発者アクセスとすべての5分試用を解除します。購入は削除されません。</string>
+    <string name="language_label">言語</string>
+    <string name="language_value_system">システム</string>
+    <string name="language_option_system">システムのデフォルト</string>
+
+    <string name="sounds_title">サウンド</string>
+    <string name="select_sound_pool">サウンドプールを選択</string>
+    <string name="back_label">&lt; 戻る</string>
+    <string name="store_try_a11y">%1$sを5分間試す</string>
+    <string name="store_buy_a11y">%1$sを購入</string>
+    <string name="store_buy_format">購入 %1$s</string>
+    <string name="retry_store">ストアを再試行</string>
+    <string name="purchases_restored_hint">購入はGoogleアカウントから自動的に復元されます。</string>
+
+    <string name="themes_title">テーマ</string>
+    <string name="customization_pack">カスタマイズパック</string>
+    <string name="pack_description">追加パレットすべて＋手動/パルス間隔</string>
+    <string name="select_palette">パレットを選択または試用</string>
+    <string name="store_pending">保留中</string>
+    <string name="store_loading">読込中</string>
+    <string name="store_unavailable">利用不可</string>
+
+    <string name="error_store_unavailable">Google Playストアを現在利用できません。</string>
+    <string name="error_purchase_query">Google Playで購入内容を確認できませんでした。</string>
+    <string name="error_price_query">Google Playから価格を読み込めませんでした。</string>
+    <string name="error_prices_loading">価格はまだ読み込み中です。後でもう一度お試しください。</string>
+    <string name="error_purchase_screen">Google Playで購入画面を開けませんでした。</string>
+
+    <string name="notif_title">Problip再生中</string>
+    <string name="notif_stop">停止</string>
+    <string name="notif_channel_name">アクティブなセッション</string>
+    <string name="notif_channel_description">Problipセッションの実行中に表示されます</string>
+    <string name="notif_interval_random">ランダム4–7秒</string>
+    <string name="notif_interval_5s">5秒ごと</string>
+    <string name="notif_interval_10s">10秒ごと</string>
+    <string name="notif_interval_15s">15秒ごと</string>
+    <string name="notif_interval_20s">20秒ごと</string>
+    <string name="notif_interval_30s">30秒ごと</string>
+    <string name="notif_interval_pulse">パルス 5 / 10–20秒</string>
+    <string name="notif_interval_manual">手動</string>
+    <string name="notif_pool_random">ランダムプール</string>
+    <string name="notif_sound_fallback">ブリップ</string>
+
+    <string name="widget_status_off">オフ</string>
+    <string name="widget_status_starting">開始中</string>
+    <string name="widget_status_running">再生中</string>
+    <string name="widget_status_error">エラー</string>
+    <string name="widget_button_start">開始</string>
+    <string name="widget_button_stop">停止</string>
+    <string name="widget_description">ホーム画面からProblipセッションを開始または停止します。</string>
+
+    <string name="help_a11y">ヘルプ</string>
+    <string name="help_title">ヘルプ</string>
+    <string name="help_quick_start">クイックスタート</string>
+    <string name="help_qs_volume">• 音量を選ぶ。</string>
+    <string name="help_qs_interval">• 間隔を選ぶ。</string>
+    <string name="help_qs_sounds">• サウンドを選ぶ。</string>
+    <string name="help_qs_start">• 開始を押す。</string>
+    <string name="help_qs_minimize">• 最小化はProblipを止めずにバックグラウンドへ。</string>
+    <string name="help_qs_exit">• 終了はセッションを止めてアプリを閉じる。</string>
+    <string name="help_intervals">間隔</string>
+    <string name="help_intervals_body">• 4-7 — 鳴動間隔はランダム秒。\n• 5 / 10 / 15 / 20 / 30 — 固定プリセット。\n• パルス — 5秒ごと、ランダム10-20秒と交互。\n• 手動 — 開始/終了秒を指定。(プレミアム)</string>
+    <string name="help_premium">プレミアム / 試用</string>
+    <string name="help_premium_body">• プレミアムは5分間試用できます。\n• 試用は自動更新されません。\n• 新しい試用は手動で何度でも開始できます。\n• 購入は永久で期限切れになりません。</string>
+    <string name="help_background">バックグラウンド</string>
+    <string name="help_background_body">• 再生中は常設の通知を表示します。\n• 通知の停止ボタンでアプリを開かずに再生を止められます。</string>
+    <string name="help_tips">ヒント</string>
+    <string name="help_tips_body">• 画面をロックする前に音量を下げる。\n• ウィジェットでホーム画面から開始/停止。\n• 試用終了後もテーマとサウンドの選択は保持されます。</string>
+    <string name="help_faq">よくある質問</string>
+    <string name="help_faq_notif_q">なぜ通知があるの？</string>
+    <string name="help_faq_notif_a">バックグラウンド再生にAndroidが要求し、停止ボタンもあります。</string>
+    <string name="help_faq_minimize_q">最小化でProblipは止まる？</string>
+    <string name="help_faq_minimize_a">いいえ。</string>
+    <string name="help_faq_exit_q">終了でProblipは止まる？</string>
+    <string name="help_faq_exit_a">はい。</string>
+    <string name="help_faq_renew_q">試用は自動更新される？</string>
+    <string name="help_faq_renew_a">いいえ。</string>
+    <string name="help_faq_expire_q">購入は期限切れになる？</string>
+    <string name="help_faq_expire_a">いいえ。</string>
+    <string name="help_faq_theme_q">プレミアムテーマがGolden Defaultに戻ったのは？</string>
+    <string name="help_faq_theme_a">一時的なアクセスが切れました。</string>
+</resources>

@@ -5,10 +5,12 @@ import com.vacster.problip.core.ProblipState
 /** What the widget's single button does when tapped. */
 enum class WidgetAction { START, STOP }
 
+/** Semantic widget status; [ProblipWidgetUpdater] localizes it for display. */
+enum class WidgetStatus { OFF, STARTING, RUNNING, ERROR }
+
 /** Everything the widget renders, derived only from the live session state. */
 data class WidgetUi(
-    val status: String,
-    val buttonLabel: String,
+    val status: WidgetStatus,
     val action: WidgetAction,
 )
 
@@ -19,8 +21,8 @@ data class WidgetUi(
  * longer exists. [ProblipState] stays the single authority.
  */
 fun widgetUi(state: ProblipState): WidgetUi = when (state) {
-    ProblipState.STOPPED -> WidgetUi("OFF", "START", WidgetAction.START)
-    ProblipState.STARTING -> WidgetUi("STARTING", "STOP", WidgetAction.STOP)
-    ProblipState.RUNNING -> WidgetUi("RUNNING", "STOP", WidgetAction.STOP)
-    ProblipState.ERROR -> WidgetUi("ERROR", "START", WidgetAction.START)
+    ProblipState.STOPPED -> WidgetUi(WidgetStatus.OFF, WidgetAction.START)
+    ProblipState.STARTING -> WidgetUi(WidgetStatus.STARTING, WidgetAction.STOP)
+    ProblipState.RUNNING -> WidgetUi(WidgetStatus.RUNNING, WidgetAction.STOP)
+    ProblipState.ERROR -> WidgetUi(WidgetStatus.ERROR, WidgetAction.START)
 }

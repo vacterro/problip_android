@@ -6,6 +6,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import com.vacster.problip.R
 import com.vacster.problip.trial.TrialAccess
 import kotlinx.coroutines.delay
 
@@ -33,30 +35,41 @@ internal fun rememberTrialNow(enabled: Boolean): Long {
     return now
 }
 
-/** Shown while the hidden seven-day override grants the content. */
-internal const val DEVELOPER_LABEL = "DEV"
+/** Semantic access label; composables resolve it to localized text. */
+internal enum class AccessLabelKind { OWNED, DEV, TRIAL, TRY }
+
+internal data class AccessLabel(val kind: AccessLabelKind, val remaining: String? = null)
 
 /**
  * Right-hand access label: nothing for free content, OWNED for a purchase, DEV
- * while Developer Access grants it, "TRIAL 04:21" while a trial runs, "TRY 5 MIN"
- * when a tap would start one.
+ * while Developer Access grants it, TRIAL with a countdown while a trial runs,
+ * TRY when a tap would start one.
  *
  * [owned] is Play ownership and nothing else, so a temporary grant never claims a
  * purchase. Developer Access is checked BEFORE the expiry, because it has no
  * timer of its own: a granted item must not advertise a trial it cannot start
  * (TrialAccess.startTrial refuses while access already exists).
  */
-internal fun trialLabel(
+internal fun accessLabel(
     free: Boolean,
     owned: Boolean,
     developerAccess: Boolean = false,
     expiryMillis: Long?,
     nowMillis: Long,
-): String? = when {
+): AccessLabel? = when {
     free -> null
-    owned -> "OWNED"
-    developerAccess -> DEVELOPER_LABEL
+    owned -> AccessLabel(AccessLabelKind.OWNED)
+    developerAccess -> AccessLabel(AccessLabelKind.DEV)
     expiryMillis != null && expiryMillis > nowMillis ->
-        "TRIAL ${TrialAccess.formatRemaining(expiryMillis, nowMillis)}"
-    else -> "TRY 5 MIN"
+        AccessLabel(AccessLabelKind.TRIAL, TrialAccess.formatRemaining(expiryMillis, nowMillis))
+    else -> AccessLabel(AccessLabelKind.TRY)
+}
+
+/** Localized text of the label, resolved in the caller's composition. */
+@Composable
+internal fun AccessLabel.text(): String = when (kind) {
+    AccessLabelKind.OWNED -> stringResource(R.string.owned_label)
+    AccessLabelKind.DEV -> stringResource(R.string.developer_label)
+    AccessLabelKind.TRIAL -> stringResource(R.string.trial_format, remaining.orEmpty())
+    AccessLabelKind.TRY -> stringResource(R.string.try_5_min)
 }

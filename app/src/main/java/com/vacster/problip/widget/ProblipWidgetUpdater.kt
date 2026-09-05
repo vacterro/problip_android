@@ -9,6 +9,7 @@ import android.widget.RemoteViews
 import com.vacster.problip.MainActivity
 import com.vacster.problip.R
 import com.vacster.problip.service.ProblipSession
+import com.vacster.problip.withAppLocale
 
 /**
  * Renders every widget instance from the live session state. Called from real
@@ -29,11 +30,31 @@ object ProblipWidgetUpdater {
         manager.updateAppWidget(ids, render(context))
     }
 
+    /** Resource mapping the pure state pins in [WidgetStateTest] hold stable. */
+    internal fun statusResFor(status: WidgetStatus): Int =
+        when (status) {
+            WidgetStatus.OFF -> R.string.widget_status_off
+            WidgetStatus.STARTING -> R.string.widget_status_starting
+            WidgetStatus.RUNNING -> R.string.widget_status_running
+            WidgetStatus.ERROR -> R.string.widget_status_error
+        }
+
+    internal fun buttonResFor(action: WidgetAction): Int =
+        when (action) {
+            WidgetAction.START -> R.string.widget_button_start
+            WidgetAction.STOP -> R.string.widget_button_stop
+        }
+
     private fun render(context: Context): RemoteViews {
+        // RemoteViews text is resolved here, outside any activity, so the
+        // in-app locale override has to be applied by hand below Android 13.
+        val localized = context.withAppLocale()
         val ui = widgetUi(ProblipSession.state.value)
+        val statusLabel = localized.getString(statusResFor(ui.status))
+        val buttonLabel = localized.getString(buttonResFor(ui.action))
         return RemoteViews(context.packageName, R.layout.widget_problip).apply {
-            setTextViewText(R.id.widget_status, ui.status)
-            setTextViewText(R.id.widget_button, "[ ${ui.buttonLabel} ]")
+            setTextViewText(R.id.widget_status, statusLabel)
+            setTextViewText(R.id.widget_button, "[ $buttonLabel ]")
             setOnClickPendingIntent(R.id.widget_button, togglePendingIntent(context))
             // The title opens the app: the widget itself must never ask for a
             // runtime permission, and the full UI is where that flow lives.

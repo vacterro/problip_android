@@ -9,7 +9,7 @@ meditation timer. The Windows version is a behavioural reference only.
 
 ## Stack
 
-- Kotlin, Jetpack Compose, coroutines, DataStore
+- Kotlin, Jetpack Compose, coroutines, DataStore, AndroidX AppCompat (per-app locales)
 - Play Billing 9.1.0 (one-time products only — no subscriptions)
 - Gradle Kotlin DSL, version catalog
 - compileSdk 36, targetSdk 36, minSdk 26
@@ -37,6 +37,18 @@ meditation timer. The Windows version is a behavioural reference only.
   only while RUNNING — without it the CPU suspended between blips with the screen
   off and a 5 s interval measured ~20 s.
 - **MINIMIZE**: explicit button that backgrounds the app without stopping the session.
+- **EXIT**: explicit button at the same utility level — a live session (STARTING/
+  RUNNING) is stopped through the normal service path first, then the task closes
+  (`finishAndRemoveTask`). STOPPED/ERROR exit without touching the service. No
+  `System.exit`, no killProcess.
+- **Help**: `?` in the Main header opens one Wintage dialog (scrollable inside,
+  Main itself never scrolls) — quick start, intervals, premium/trial, background,
+  tips, FAQ. The hidden Developer Access gesture is deliberately not documented.
+- **Languages**: English (default), Русский, Eesti, 日本語, plus System Default,
+  picked from a LANGUAGE row in Settings via `AppCompatDelegate.setApplicationLocales`
+  (persisted by AppCompat; `generateLocaleConfig` on, packaged locales pinned to
+  en/ru/et/ja). The service, notification and widget resolve their strings through
+  the same override.
 
 Everything premium rides two Play products (the premium sounds and one Customization
 Pack); the access rule is one place: `free || owned || activeTrial || developerAccess`.
@@ -97,11 +109,14 @@ Point `local.properties` at the SDK (`sdk.dir=...`).
 | — | screen-off reliability | done — session WakeLock, MINIMIZE, debug drift log; device acceptance pending |
 | — | Developer Access + MANUAL | done — hidden seven-day unlock, premium manual interval |
 | — | PULSE | done — alternating 5 s / 10–20 s premium preset |
+| — | interaction polish | done — playback lamp, STARTING status, haptics, pressed/selected states |
+| — | localization + help + exit | done — en/ru/et/ja per-app locales, `?` Help dialog, state-aware EXIT |
 
-Evidence for the table above: `gradlew test assembleDebug assembleRelease lintVitalRelease`
-— **175 unique JVM tests, 0 failures, 23 suites**, `lintVitalRelease` clean, debug and
-release APKs built. `test` runs the debug and release variants of the same suite, so
-that number counts each test once.
+Evidence for the table above: `gradlew test assembleDebug assembleRelease lint lintVitalRelease`
+— **185 unique JVM tests, 0 failures, 25 suites**, lint clean (0 errors; remaining
+warnings reviewed — typography/dependency-age noise, the deliberate session WakeLock
+and two localization advisories), debug and release APKs built. `test` runs the
+debug and release variants of the same suite, so that number counts each test once.
 
 Open gates that need something this repository cannot provide:
 
@@ -113,6 +128,8 @@ Open gates that need something this repository cannot provide:
   Play Console products and an internal test track (W8 developer setup first).
 - W9 publication: a public URL for the privacy policy and a contact email.
 
-Next code wave: none queued; every remaining item needs a device or a Play Console seat.
+Next code wave: localization/help/exit is complete; what remains needs a device
+(physical acceptance, T-014) or a Play Console seat (T-009/T-010) or a hosting
+decision (T-015).
 
 Project memory (waves, tickets, evidence) lives in `.saipen/`.

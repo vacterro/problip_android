@@ -27,6 +27,7 @@ fun ProblipRoot(
     onStartRequested: () -> Unit,
     onPurchaseRequested: (String) -> Unit,
     onMinimize: () -> Unit,
+    onExit: () -> Unit,
 ) {
     var route by remember { mutableStateOf(ProblipRoute.MAIN) }
 
@@ -46,6 +47,7 @@ fun ProblipRoot(
                 onOpenThemes = { route = ProblipRoute.THEMES },
                 onOpenSettings = { route = ProblipRoute.SETTINGS },
                 onMinimize = onMinimize,
+                onExit = onExit,
             )
             ProblipRoute.SOUNDS -> SoundsScreen(
                 viewModel = viewModel,

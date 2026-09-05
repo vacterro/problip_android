@@ -50,10 +50,10 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
     val trialExpiries: StateFlow<Map<String, Long>> = trials.expiries
     val developerExpiryMillis: StateFlow<Long> = trials.developerExpiryMillis
 
-    /** Store-only state: purchases awaiting Play, connection, last store failure. */
+    /** Store-only state: purchases awaiting Play, connection, last store failure (as a string resource). */
     val pending: StateFlow<Set<String>> = billing.pending
     val connection: StateFlow<BillingConnection> = billing.connection
-    val billingError: StateFlow<String?> = billing.error
+    val billingError: StateFlow<Int?> = billing.error
 
     fun ownsThemePack(): Boolean = ProductCatalog.THEME_PACK in billing.owned.value
 

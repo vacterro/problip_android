@@ -7,7 +7,9 @@ import org.junit.Test
 
 /**
  * The access label users read on every premium row. Pure, so the whole matrix is
- * pinned here instead of on a device.
+ * pinned here instead of on a device. Localization turned the label into a
+ * SEMANTIC value ([AccessLabel]) that the screens resolve to localized text;
+ * these pins hold the semantics stable.
  *
  * Developer Access must never read OWNED: it expires, a purchase does not, and a
  * label that claims a purchase the user never made is the one mistake that cannot
@@ -24,10 +26,10 @@ class TrialLabelTest {
 
     @Test
     fun freeContentCarriesNoLabelAtAll() {
-        assertNull(trialLabel(free = true, owned = false, expiryMillis = null, nowMillis = now))
+        assertNull(accessLabel(free = true, owned = false, expiryMillis = null, nowMillis = now))
         // Even with everything granted: a free row has nothing to advertise.
         assertNull(
-            trialLabel(
+            accessLabel(
                 free = true,
                 owned = true,
                 developerAccess = true,
@@ -40,29 +42,28 @@ class TrialLabelTest {
     @Test
     fun aRealPlayPurchaseReadsOwned() {
         assertEquals(
-            "OWNED",
-            trialLabel(free = false, owned = true, expiryMillis = null, nowMillis = now),
+            AccessLabelKind.OWNED,
+            accessLabel(free = false, owned = true, expiryMillis = null, nowMillis = now)?.kind,
         )
     }
 
     @Test
     fun developerAccessReadsDevAndNeverOwned() {
-        val label = trialLabel(
+        val label = accessLabel(
             free = false,
             owned = false,
             developerAccess = true,
             expiryMillis = null,
             nowMillis = now,
         )
-        assertEquals(DEVELOPER_LABEL, label)
-        assertEquals("DEV", label)
+        assertEquals(AccessLabelKind.DEV, label?.kind)
     }
 
     @Test
     fun anActiveTrialCountsDownAsMinutesAndSeconds() {
         assertEquals(
-            "TRIAL 05:00",
-            trialLabel(
+            AccessLabel(AccessLabelKind.TRIAL, "05:00"),
+            accessLabel(
                 free = false,
                 owned = false,
                 expiryMillis = now + TrialAccess.DURATION_MS,
@@ -70,8 +71,8 @@ class TrialLabelTest {
             ),
         )
         assertEquals(
-            "TRIAL 04:37",
-            trialLabel(
+            AccessLabel(AccessLabelKind.TRIAL, "04:37"),
+            accessLabel(
                 free = false,
                 owned = false,
                 expiryMillis = now + 277_000L,
@@ -83,8 +84,8 @@ class TrialLabelTest {
     @Test
     fun contentWithNoAccessOffersTheFiveMinuteTrial() {
         assertEquals(
-            "TRY 5 MIN",
-            trialLabel(free = false, owned = false, expiryMillis = null, nowMillis = now),
+            AccessLabelKind.TRY,
+            accessLabel(free = false, owned = false, expiryMillis = null, nowMillis = now)?.kind,
         )
     }
 
@@ -92,12 +93,12 @@ class TrialLabelTest {
     fun anExpiredTrialOffersANewOneInsteadOfShowingAStaleCountdown() {
         // The expiry boundary itself is already expired, exactly like TrialAccess.
         assertEquals(
-            "TRY 5 MIN",
-            trialLabel(free = false, owned = false, expiryMillis = now, nowMillis = now),
+            AccessLabelKind.TRY,
+            accessLabel(free = false, owned = false, expiryMillis = now, nowMillis = now)?.kind,
         )
         assertEquals(
-            "TRY 5 MIN",
-            trialLabel(free = false, owned = false, expiryMillis = now - 1L, nowMillis = now),
+            AccessLabelKind.TRY,
+            accessLabel(free = false, owned = false, expiryMillis = now - 1L, nowMillis = now)?.kind,
         )
     }
 
@@ -105,26 +106,26 @@ class TrialLabelTest {
     fun ownershipOutranksDeveloperAccessWhichOutranksARunningTrial() {
         val expiry = now + TrialAccess.DURATION_MS
         assertEquals(
-            "OWNED",
-            trialLabel(
+            AccessLabelKind.OWNED,
+            accessLabel(
                 free = false,
                 owned = true,
                 developerAccess = true,
                 expiryMillis = expiry,
                 nowMillis = now,
-            ),
+            )?.kind,
         )
         // Developer Access has no timer of its own, so a granted item must not
         // advertise a trial (TrialAccess.startTrial would refuse to start one).
         assertEquals(
-            DEVELOPER_LABEL,
-            trialLabel(
+            AccessLabelKind.DEV,
+            accessLabel(
                 free = false,
                 owned = false,
                 developerAccess = true,
                 expiryMillis = expiry,
                 nowMillis = now,
-            ),
+            )?.kind,
         )
     }
 }

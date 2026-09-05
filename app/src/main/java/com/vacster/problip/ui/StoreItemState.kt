@@ -1,5 +1,6 @@
 package com.vacster.problip.ui
 
+import com.vacster.problip.R
 import com.vacster.problip.billing.BillingConnection
 
 /**
@@ -50,12 +51,15 @@ fun storeItemState(
     else -> StoreItemState.UNAVAILABLE
 }
 
-/** Short right-hand label for a row; null means "render nothing". */
-fun storeItemLabel(state: StoreItemState, price: String?): String? = when (state) {
-    StoreItemState.INCLUDED -> "INCLUDED"
-    StoreItemState.OWNED -> "OWNED"
-    StoreItemState.PENDING -> "PENDING"
-    StoreItemState.PURCHASABLE -> price
-    StoreItemState.LOADING -> "LOADING"
-    StoreItemState.UNAVAILABLE -> "UNAVAILABLE"
+/**
+ * Resource id of the short right-hand label; null means "render nothing".
+ * PURCHASABLE displays the Play price itself, so it carries no label resource.
+ */
+fun storeItemLabelRes(state: StoreItemState, price: String?): Int? = when (state) {
+    StoreItemState.INCLUDED -> R.string.included_label
+    StoreItemState.OWNED -> R.string.owned_label
+    StoreItemState.PENDING -> R.string.store_pending
+    StoreItemState.PURCHASABLE -> null
+    StoreItemState.LOADING -> R.string.store_loading
+    StoreItemState.UNAVAILABLE -> R.string.store_unavailable
 }

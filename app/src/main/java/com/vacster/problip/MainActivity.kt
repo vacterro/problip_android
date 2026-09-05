@@ -10,6 +10,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -19,13 +20,18 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vacster.problip.billing.ProductCatalog
+import com.vacster.problip.service.ExitPolicy
+import com.vacster.problip.service.ProblipService
+import com.vacster.problip.service.ProblipSession
 import com.vacster.problip.theme.ThemeCatalog
 import com.vacster.problip.ui.ProblipRoot
 import com.vacster.problip.ui.ProblipViewModel
 import com.vacster.problip.ui.theme.ProblipTheme
 import com.vacster.problip.ui.theme.paletteFor
 
-class MainActivity : ComponentActivity() {
+// AppCompatActivity (not ComponentActivity) is what makes the AppCompat per-app
+// locale mechanism work on API 26-32; Compose setContent is unaffected.
+class MainActivity : AppCompatActivity() {
 
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -77,9 +83,18 @@ class MainActivity : ComponentActivity() {
                     },
                     onPurchaseRequested = { productId -> billing.purchase(this, productId) },
                     // Task behaviour stays at the Activity boundary: Compose never
-                    // casts LocalContext to an Activity. The service is untouched,
-                    // so an active session keeps blipping in the background.
+                    // casts LocalContext to an Activity.
                     onMinimize = { moveTaskToBack(true) },
+                    // EXIT is state-aware: a live session (STARTING/RUNNING) is
+                    // stopped through the normal service path first, while
+                    // STOPPED/ERROR must not spawn a service just to stop it.
+                    // No System.exit, no killProcess, no force-stop hacks.
+                    onExit = {
+                        if (ExitPolicy.shouldStopServiceBeforeExit(ProblipSession.state.value)) {
+                            ProblipService.stop(this)
+                        }
+                        finishAndRemoveTask()
+                    },
                 )
             }
         }

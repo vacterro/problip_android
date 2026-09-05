@@ -65,9 +65,17 @@ class StoreItemStateTest {
 
     @Test
     fun everyStateHasItsOwnLabel() {
-        val labels = StoreItemState.entries.map { storeItemLabel(it, "€0.49") }
+        // PURCHASABLE intentionally shows the Play price itself, so it maps to
+        // null while every other state carries its own distinct resource.
+        val labels = StoreItemState.entries.map { storeItemLabelRes(it, "€0.49") }
         assertEquals(labels.distinct(), labels)
-        assertNull(storeItemLabel(StoreItemState.PURCHASABLE, null))
+        assertNull(storeItemLabelRes(StoreItemState.PURCHASABLE, null))
+        StoreItemState.entries.filterNot { it == StoreItemState.PURCHASABLE }.forEach { state ->
+            assertEquals(
+                state,
+                StoreItemState.entries.first { storeItemLabelRes(it, "€0.49") == storeItemLabelRes(state, "€0.49") },
+            )
+        }
     }
 
     @Test
