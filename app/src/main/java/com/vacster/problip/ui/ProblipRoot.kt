@@ -7,8 +7,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 
-/** Three destinations; too few to justify a navigation dependency. */
-enum class ProblipRoute { MAIN, SOUNDS, THEMES }
+/** Four destinations; too few to justify a navigation dependency. */
+enum class ProblipRoute { MAIN, SOUNDS, THEMES, SETTINGS }
 
 /**
  * Screen switch for the W11 layout: the utility screen stays first, the store
@@ -19,6 +19,7 @@ fun ProblipRoot(
     viewModel: ProblipViewModel,
     onStartRequested: () -> Unit,
     onPurchaseRequested: (String) -> Unit,
+    onMinimize: () -> Unit,
 ) {
     var route by remember { mutableStateOf(ProblipRoute.MAIN) }
 
@@ -30,6 +31,8 @@ fun ProblipRoot(
             onStartRequested = onStartRequested,
             onOpenSounds = { route = ProblipRoute.SOUNDS },
             onOpenThemes = { route = ProblipRoute.THEMES },
+            onOpenSettings = { route = ProblipRoute.SETTINGS },
+            onMinimize = onMinimize,
         )
         ProblipRoute.SOUNDS -> SoundsScreen(
             viewModel = viewModel,
@@ -40,6 +43,10 @@ fun ProblipRoot(
             viewModel = viewModel,
             onBack = { route = ProblipRoute.MAIN },
             onPurchaseRequested = onPurchaseRequested,
+        )
+        ProblipRoute.SETTINGS -> SettingsScreen(
+            viewModel = viewModel,
+            onBack = { route = ProblipRoute.MAIN },
         )
     }
 }

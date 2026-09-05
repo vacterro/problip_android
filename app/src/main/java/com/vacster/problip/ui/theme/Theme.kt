@@ -7,17 +7,20 @@ import androidx.compose.runtime.CompositionLocalProvider
 import com.vacster.problip.theme.ThemeCatalog
 
 /**
- * Applies the effective theme for [themeId]: locked/unknown ids render as
- * Classic unless [ownsThemePack] proves the Themes Pack entitlement. Switching
- * is instant because only the CompositionLocal-provided palette changes.
+ * Applies the effective theme for [themeId]: a premium palette renders when
+ * [ownsThemePack] proves the Themes Pack entitlement or while the theme's own id
+ * is in [trials]; anything else renders Classic, so an expired trial cannot keep
+ * painting a paid palette. Switching is instant because only the
+ * CompositionLocal-provided palette changes.
  */
 @Composable
 fun ProblipTheme(
     themeId: String? = ThemeCatalog.CLASSIC.id,
     ownsThemePack: Boolean = false,
+    trials: Set<String> = emptySet(),
     content: @Composable () -> Unit,
 ) {
-    val entry = ThemeCatalog.effective(themeId, ownsThemePack)
+    val entry = ThemeCatalog.effective(themeId, ownsThemePack, trials)
     val colors = paletteFor(entry.id)
     CompositionLocalProvider(LocalProblipColors provides colors) {
         MaterialTheme(

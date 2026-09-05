@@ -58,6 +58,19 @@ class BillingRepository(
     private val _owned = MutableStateFlow<Set<String>>(emptySet())
     val owned: StateFlow<Set<String>> = _owned.asStateFlow()
 
+    /**
+     * False until [owned] holds an initialized snapshot — either Play's answer or
+     * the persisted cache standing in for it. A cold start must not resolve its
+     * first session from the empty placeholder, so consumers that need the real
+     * ownership (the service's first pool and interval) wait for this instead of
+     * reading `owned.value` immediately.
+     *
+     * Deliberately NOT "Play answered": offline, Play never answers, and the
+     * cached seed is a perfectly good snapshot to start from.
+     */
+    private val _ownershipReady = MutableStateFlow(false)
+    val ownershipReady: StateFlow<Boolean> = _ownershipReady.asStateFlow()
+
     /** Purchases Play accepted but has not completed; never grants access. */
     private val _pending = MutableStateFlow<Set<String>>(emptySet())
     val pending: StateFlow<Set<String>> = _pending.asStateFlow()
@@ -94,11 +107,25 @@ class BillingRepository(
     @Volatile
     private var seeded = false
 
-    /** Offline convenience seed from the local cache; never overrides Play truth. */
+    /**
+     * Whether Play itself has answered a purchase query in this process. Once it
+     * has, its answer is the authority even when EMPTY — a refund or a revocation
+     * is exactly an empty answer, so the cache may not be re-applied over it.
+     */
+    @Volatile
+    private var playAnswered = false
+
+    /**
+     * Offline convenience seed from the local cache; never overrides Play truth.
+     * Marks ownership initialized either way, so a first-run install with an empty
+     * cache does not make a cold start wait for the network.
+     */
     fun seedCached(cached: Set<String>) {
-        if (seeded) return
-        seeded = true
-        if (_owned.value.isEmpty() && cached.isNotEmpty()) _owned.value = cached
+        if (!seeded) {
+            seeded = true
+            if (seedableFromCache(_owned.value, cached, playAnswered)) _owned.value = cached
+        }
+        _ownershipReady.value = true
     }
 
     fun connect() {
@@ -149,12 +176,21 @@ class BillingRepository(
                 val result = client.queryPurchasesAsync(params)
                 if (result.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                     val purchases = result.purchasesList.map(::toPurchaseInfo)
+                    // Play has spoken: from here its answer supersedes the cache
+                    // even when empty, so a refund or a revocation really revokes.
+                    playAnswered = true
                     _owned.value = toOwned(purchases)
                     _pending.value = toPending(purchases)
+                    _ownershipReady.value = true
                     cacheOwned(_owned.value)
                     acknowledgeIfNeeded(purchases)
+                    // A success must retract its own previous failure, otherwise a
+                    // recovered store keeps showing "could not check your
+                    // purchases" forever. Only this message is cleared, so a fresh
+                    // price failure from the parallel query survives.
+                    _error.compareAndSet(PURCHASE_QUERY_FAILED, null)
                 } else {
-                    _error.value = "Could not check your purchases with Google Play."
+                    _error.value = PURCHASE_QUERY_FAILED
                 }
             }
         }
@@ -195,8 +231,9 @@ class BillingRepository(
                             formattedPrice = d.oneTimePurchaseOfferDetails?.formattedPrice ?: "",
                         )
                     }
+                    _error.compareAndSet(PRICE_QUERY_FAILED, null)
                 } else {
-                    _error.value = "Could not load store prices from Google Play."
+                    _error.value = PRICE_QUERY_FAILED
                 }
             }
         }
@@ -251,4 +288,10 @@ class BillingRepository(
         },
         acknowledged = p.isAcknowledged,
     )
+
+    private companion object {
+        /** Kept as constants so a successful query can retract exactly its own failure. */
+        const val PURCHASE_QUERY_FAILED = "Could not check your purchases with Google Play."
+        const val PRICE_QUERY_FAILED = "Could not load store prices from Google Play."
+    }
 }

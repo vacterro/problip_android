@@ -184,12 +184,22 @@ The scheduler should receive a list of playable/owned sounds and never know Bill
 Stable IDs:
 
 ```text
-theme_classic
-theme_terminal
-theme_phosphor
-theme_midnight
-theme_amber
-theme_pink
+theme_classic                 (free, Wintage Golden Default)
+theme_wintage_golden
+theme_wintage_claudecode
+theme_wintage_antigravity
+theme_wintage_klite
+theme_wintage_freebuff
+theme_wintage_codenomad
+theme_wintage_fpdefault
+theme_wintage_goldenvintage
+theme_wintage_vintagedark
+theme_wintage_vintageclassic
+theme_wintage_oled
+theme_wintage_dracula
+theme_wintage_nord
+theme_wintage_solarized
+theme_wintage_custom
 ```
 
 Start with `theme_classic`.

@@ -305,14 +305,12 @@ Gate:
 Goal: add small cosmetic monetization surface.
 
 Free:
-- `theme_classic`
+- `theme_classic` (Wintage Golden Default)
 
-Premium pack candidates:
-- `theme_terminal`
-- `theme_phosphor`
-- `theme_midnight`
-- `theme_amber`
-- `theme_pink`
+Premium pack, the fifteen other Wintage palettes (`theme_wintage_*`):
+- Dark Golden (Win95), Claude Code, Antigravity, K-Lite (MPC-HC), FreeBuff, CodeNomad
+- Default, Golden Vintage, Vintage Dark, Vintage Classic, Dark 2 (OLED)
+- Dracula, Nord, Solarized Dark, Custom
 
 Sell themes as one pack initially rather than dozens of separate SKUs.
 

@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Problip</string>
+    <string name="widget_title">PROBLIP</string>
+    <string name="widget_status_off">OFF</string>
+    <string name="widget_button_start">[ START ]</string>
+    <string name="widget_description">Start or stop a Problip session from the home screen.</string>
 </resources>

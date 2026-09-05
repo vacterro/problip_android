@@ -71,8 +71,8 @@ class EntitlementsTest {
             setOf("sound_original", "sound_glass"),
             SoundCatalog.playableSelection(setOf("sound_original", "sound_glass", "sound_wood"), owned),
         )
-        assertEquals(ThemeCatalog.PINK, ThemeCatalog.effective("theme_pink", ownsThemePack = true))
-        assertEquals(ThemeCatalog.CLASSIC, ThemeCatalog.effective("theme_pink", ownsThemePack = false))
+        assertEquals(ThemeCatalog.DRACULA, ThemeCatalog.effective("theme_wintage_dracula", ownsThemePack = true))
+        assertEquals(ThemeCatalog.CLASSIC, ThemeCatalog.effective("theme_wintage_dracula", ownsThemePack = false))
     }
 
     @Test

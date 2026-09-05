@@ -33,3 +33,18 @@ fun toPending(purchases: List<PurchaseInfo>): Set<String> =
         .filter { it.state == PurchaseState.PENDING }
         .flatMap { it.productIds }
         .toSet()
+
+/**
+ * Whether the persisted ownership cache may seed the live snapshot.
+ *
+ * The cache exists so a cold start with no network still knows what was bought;
+ * it must never become the authority. Once Play has answered ([playAnswered]),
+ * its answer stands even when it is EMPTY — that is exactly what a refund or a
+ * revocation looks like, and re-applying the cache there would resurrect
+ * ownership Play just took away.
+ */
+fun seedableFromCache(
+    current: Set<String>,
+    cached: Set<String>,
+    playAnswered: Boolean,
+): Boolean = !playAnswered && current.isEmpty() && cached.isNotEmpty()

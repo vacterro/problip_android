@@ -51,15 +51,39 @@ class BlipScheduler(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    /** Interval used for the NEXT wait; may be changed while running without spawning a second loop. */
+    /**
+     * Interval used for the NEXT wait; may be changed while running without
+     * spawning a second loop.
+     *
+     * Assigning a DIFFERENT value discards the PULSE phase, which is the whole
+     * switching contract in one line: entering PULSE, leaving it, or losing its
+     * entitlement mid-session all reset the alternation, while the service
+     * re-assigning an equal value (a volume change, a purchase, an unrelated
+     * setting) leaves the phase alone.
+     */
     @Volatile
     var interval: IntervalConfig = initialInterval
+        set(value) {
+            if (field != value) {
+                field = value
+                pulseShortSlot = true
+            }
+        }
+
+    /**
+     * PULSE phase, owned by the session: true means the next wait is the 5 s slot.
+     * Written by the loop and by the [interval] setter, never persisted — STOP
+     * discards it and the next START begins short again.
+     */
+    @Volatile
+    private var pulseShortSlot = true
 
     fun start() {
         synchronized(lock) {
             if (loopJob?.isActive == true) return
             _error.value = null
             _state.value = ProblipState.STARTING
+            pulseShortSlot = true
             loopJob = scope.launch {
                 val self = coroutineContext.job
                 try {
@@ -71,7 +95,7 @@ class BlipScheduler(
                             return@launch
                         }
                         _state.value = ProblipState.RUNNING
-                        delayBoundary.delay(interval.nextDelayMs(randomSource))
+                        delayBoundary.delay(nextDelayMs())
                     }
                 } catch (e: CancellationException) {
                     // A cancelled loop must never clobber the state of a newer session.
@@ -82,10 +106,18 @@ class BlipScheduler(
         }
     }
 
+    /** Reads the current interval once, then advances the PULSE phase. */
+    private fun nextDelayMs(): Long {
+        val shortSlot = pulseShortSlot
+        pulseShortSlot = !shortSlot
+        return interval.nextDelayMs(randomSource, shortSlot)
+    }
+
     fun stop() {
         synchronized(lock) {
             loopJob?.cancel()
             loopJob = null
+            pulseShortSlot = true
             _state.value = ProblipState.STOPPED
         }
     }

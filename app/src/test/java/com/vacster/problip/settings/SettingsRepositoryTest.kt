@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vacster.problip.core.IntervalMode
 import java.io.File
@@ -65,8 +66,8 @@ class SettingsRepositoryTest {
         assertEquals(setOf("sound_original", "sound_glass"), repo3.settings.first().selectedSounds)
 
         val (repo4, _) = newRepo()
-        repo4.setTheme("theme_terminal") // locked ids persist for post-purchase activation
-        assertEquals("theme_terminal", repo4.settings.first().themeId)
+        repo4.setTheme("theme_wintage_nord") // locked ids persist for post-purchase activation
+        assertEquals("theme_wintage_nord", repo4.settings.first().themeId)
 
         val (repo5, _) = newRepo()
         repo5.setTheme("not_a_theme")
@@ -119,5 +120,63 @@ class SettingsRepositoryTest {
         assertEquals(IntervalMode.RANDOM_4_7, s.intervalMode)
         assertEquals(setOf("sound_original"), s.selectedSounds)
         assertEquals("theme_classic", s.themeId)
+    }
+
+    @Test
+    fun trialExpiriesRoundTripAndDropUntrialableIds() = runBlocking {
+        val (repo, _) = newRepo()
+        repo.updateTrialExpiries { current ->
+            current + mapOf(
+                "sound_glass" to 4_000L,
+                "sound_original" to 9_000L, // free: nothing to trial
+                "not_a_sound" to 9_000L,
+            )
+        }
+        assertEquals(mapOf("sound_glass" to 4_000L), repo.settings.first().trialExpiries)
+    }
+
+    @Test
+    fun persistedTrialCsvSurvivesProcessDeathAndIgnoresJunk() = runBlocking {
+        // The on-disk format is "id:epochMillis" pairs; a reload is just a re-read.
+        val (repo, ds) = newRepo()
+        ds.edit {
+            it[stringPreferencesKey("trial_expiries")] =
+                "sound_glass:5000,theme_wintage_dracula:7000,not_a_sound:9000,sound_bonk:oops,sound_wood"
+        }
+        assertEquals(
+            mapOf("sound_glass" to 5_000L, "theme_wintage_dracula" to 7_000L),
+            repo.settings.first().trialExpiries,
+        )
+    }
+
+    @Test
+    fun developerAccessExpirySurvivesProcessDeath() = runBlocking {
+        val (repo, _) = newRepo()
+        repo.setDeveloperAccessExpiry(1_700_000_000_000L)
+        assertEquals(1_700_000_000_000L, repo.settings.first().developerAccessExpiryMillis)
+
+        // A junk/negative timestamp reads as "never unlocked", not as access.
+        val (repo2, ds) = newRepo()
+        ds.edit { it[longPreferencesKey("developer_access_expiry")] = -5L }
+        assertEquals(0L, repo2.settings.first().developerAccessExpiryMillis)
+    }
+
+    @Test
+    fun manualIntervalPersistsOnlyValidatedBounds() = runBlocking {
+        val (repo, _) = newRepo()
+        // Written the wrong way round: stored ordered, so FROM > TO never persists.
+        repo.setManualInterval(10, 7)
+        val s = repo.settings.first()
+        assertEquals(7, s.manualFromSeconds)
+        assertEquals(10, s.manualToSeconds)
+
+        val (repo2, ds) = newRepo()
+        ds.edit {
+            it[intPreferencesKey("manual_from_seconds")] = 0
+            it[intPreferencesKey("manual_to_seconds")] = 99_999
+        }
+        val clamped = repo2.settings.first()
+        assertEquals(1, clamped.manualFromSeconds)
+        assertEquals(3600, clamped.manualToSeconds)
     }
 }

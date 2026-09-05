@@ -25,6 +25,19 @@ class ProblipNotificationTest {
     }
 
     @Test
+    fun describeCoversBothPremiumIntervals() {
+        // The notification names what is actually scheduled, so PULSE says both slots.
+        assertEquals(
+            "Pulse 5 / 10–20 sec • Original Blip • 5%",
+            ProblipNotification.describe(IntervalMode.PULSE, "Original Blip", 5),
+        )
+        assertEquals(
+            "Manual • Original Blip • 5%",
+            ProblipNotification.describe(IntervalMode.MANUAL, "Original Blip", 5),
+        )
+    }
+
+    @Test
     fun soundLabelNamesThePlayableSelection() {
         // Single playable sound: its display name, whatever is stored around it.
         assertEquals("Original Blip", ProblipNotification.soundLabel(setOf("sound_original")))

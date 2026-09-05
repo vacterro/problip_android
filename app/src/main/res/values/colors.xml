@@ -2,4 +2,10 @@
 <resources>
     <!-- Golden Default background from the Windows original. -->
     <color name="problip_bg">#1A1810</color>
+    <!-- Widget palette: Classic only, so a theme trial expiring never needs a
+         launcher-side refresh. Mirrors PALETTE_CLASSIC in ui/theme/Palettes.kt. -->
+    <color name="problip_raised">#3D372A</color>
+    <color name="problip_bevel">#75663D</color>
+    <color name="problip_gold">#F0D060</color>
+    <color name="problip_text_dim">#9C9371</color>
 </resources>

@@ -6,13 +6,16 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.vacster.problip.audio.SoundCatalog
 import com.vacster.problip.audio.Volume
 import com.vacster.problip.billing.ProductCatalog
 import com.vacster.problip.core.IntervalMode
+import com.vacster.problip.core.ManualInterval
 import com.vacster.problip.theme.ThemeCatalog
+import com.vacster.problip.trial.TrialAccess
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -33,6 +36,13 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val themeId: String = ThemeCatalog.CLASSIC.id,
         /** Offline convenience cache of Play ownership; Play is the authority. */
         val ownedProducts: Set<String> = emptySet(),
+        /** Premium content id -> wall-clock trial expiry, survives process death. */
+        val trialExpiries: Map<String, Long> = emptyMap(),
+        /** Wall-clock end of the hidden seven-day Developer Access; 0 = never unlocked. */
+        val developerAccessExpiryMillis: Long = 0L,
+        /** Premium Manual Interval bounds, remembered across trials and purchases. */
+        val manualFromSeconds: Int = ManualInterval.DEFAULT_FROM_SECONDS,
+        val manualToSeconds: Int = ManualInterval.DEFAULT_TO_SECONDS,
     )
 
     val settings: Flow<Settings> = dataStore.data
@@ -41,6 +51,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             if (e is IOException) emit(emptyPreferences()) else throw e
         }
         .map { p ->
+            val manual = manualBounds(p)
             Settings(
                 volumePercent = p[VOLUME]?.coerceIn(0, 100) ?: Volume.DEFAULT_PERCENT,
                 intervalMode = p[INTERVAL]?.let { stored ->
@@ -53,6 +64,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                     ?.filter { ProductCatalog.isValid(it) }
                     ?.toSet()
                     ?: emptySet(),
+                trialExpiries = parseTrials(p[TRIALS]),
+                developerAccessExpiryMillis = p[DEVELOPER_EXPIRY]?.coerceAtLeast(0L) ?: 0L,
+                manualFromSeconds = manual.first,
+                manualToSeconds = manual.second,
             )
         }
 
@@ -82,6 +97,63 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it[OWNED] = sanitized.joinToString(",") }
     }
 
+    /**
+     * Read-modify-write of the trial expiries inside one atomic store edit, so two
+     * rapid taps cannot lose each other's trial. Only trialable ids are stored.
+     */
+    suspend fun updateTrialExpiries(transform: (Map<String, Long>) -> Map<String, Long>) {
+        dataStore.edit { prefs ->
+            prefs[TRIALS] = encodeTrials(transform(parseTrials(prefs[TRIALS])))
+        }
+    }
+
+    /** Absolute wall-clock end of Developer Access; survives process death and reboot. */
+    suspend fun setDeveloperAccessExpiry(expiryMillis: Long) {
+        dataStore.edit { it[DEVELOPER_EXPIRY] = expiryMillis.coerceAtLeast(0L) }
+    }
+
+    /** Validated bounds only; the scheduler must never see FROM > TO or 0 seconds. */
+    suspend fun setManualInterval(fromSeconds: Int, toSeconds: Int) {
+        val (from, to) = ManualInterval.sanitize(fromSeconds, toSeconds)
+        dataStore.edit {
+            it[MANUAL_FROM] = from
+            it[MANUAL_TO] = to
+        }
+    }
+
+    /**
+     * Drops both temporary grants in ONE edit, so access recomputes once instead of
+     * flickering through a half-cleared state. Purchases, volume, interval, pool and
+     * theme are deliberately left alone: this returns the app to free + owned.
+     */
+    suspend fun clearTemporaryAccess() {
+        dataStore.edit { prefs ->
+            prefs.remove(TRIALS)
+            prefs.remove(DEVELOPER_EXPIRY)
+        }
+    }
+
+    private fun manualBounds(p: Preferences): Pair<Int, Int> = ManualInterval.sanitize(
+        p[MANUAL_FROM] ?: ManualInterval.DEFAULT_FROM_SECONDS,
+        p[MANUAL_TO] ?: ManualInterval.DEFAULT_TO_SECONDS,
+    )
+
+    private fun parseTrials(csv: String?): Map<String, Long> {
+        if (csv.isNullOrBlank()) return emptyMap()
+        val parsed = csv.split(',').mapNotNull { part ->
+            val id = part.substringBefore(':').trim()
+            val millis = part.substringAfter(':', "").trim().toLongOrNull() ?: return@mapNotNull null
+            id to millis
+        }.toMap()
+        return TrialAccess.sanitize(parsed)
+    }
+
+    private fun encodeTrials(expiries: Map<String, Long>): String =
+        TrialAccess.sanitize(expiries)
+            .entries
+            .sortedBy { it.key }
+            .joinToString(",") { "${it.key}:${it.value}" }
+
     private fun selectedSounds(p: Preferences): Set<String> {
         val csv = p[SOUNDS]
         if (csv != null) {
@@ -99,6 +171,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         private val SOUNDS = stringPreferencesKey("sounds")
         private val THEME = stringPreferencesKey("theme")
         private val OWNED = stringPreferencesKey("owned_products")
+        private val TRIALS = stringPreferencesKey("trial_expiries")
+        private val DEVELOPER_EXPIRY = longPreferencesKey("developer_access_expiry")
+        private val MANUAL_FROM = intPreferencesKey("manual_from_seconds")
+        private val MANUAL_TO = intPreferencesKey("manual_to_seconds")
         private val LEGACY_SOUND = stringPreferencesKey("sound")
 
         fun fromContext(context: Context): SettingsRepository =

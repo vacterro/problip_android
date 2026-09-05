@@ -235,7 +235,156 @@ class BlipSchedulerTest {
         assertEquals(IntervalConfig.Fixed(15_000), IntervalMode.FIXED_15S.toConfig())
         assertEquals(IntervalConfig.Fixed(20_000), IntervalMode.FIXED_20S.toConfig())
         assertEquals(IntervalConfig.Fixed(30_000), IntervalMode.FIXED_30S.toConfig())
+        assertEquals(IntervalConfig.Pulse(5_000, 10_000, 20_000), IntervalMode.PULSE.toConfig())
         assertEquals(IntervalMode.RANDOM_4_7.toConfig(), IntervalConfig.DEFAULT)
+    }
+
+    // PULSE: 5 s, then a deliberately generated random 10-20 s, forever.
+
+    @Test
+    fun pulseStartsShortAndThenAlternatesLongAndShort() = runTest {
+        val h = Harness(
+            backgroundScope,
+            IntervalMode.PULSE.toConfig(),
+            random = ScriptedRandom(15_000, 20_000, 11_000),
+        )
+        h.scheduler.start()
+        runCurrent()
+        advanceTimeBy(500L + 5_000 + 15_000 + 5_000 + 20_000 + 5_000 + 1)
+        assertEquals(
+            listOf(500L, 5_000L, 15_000L, 5_000L, 20_000L, 5_000L, 11_000L),
+            h.delays.requested,
+        )
+        h.scheduler.stop()
+    }
+
+    @Test
+    fun pulseAsksTheInjectedRandomForTenToTwentySecondsOnly() = runTest {
+        val bounds = mutableListOf<Pair<Long, Long>>()
+        val h = Harness(
+            backgroundScope,
+            IntervalMode.PULSE.toConfig(),
+            random = RandomSource { from, to ->
+                bounds += from to to
+                from
+            },
+        )
+        h.scheduler.start()
+        runCurrent()
+        advanceTimeBy(60_000)
+        // Every long slot re-rolls, and always over the same inclusive window.
+        assertTrue(bounds.isNotEmpty())
+        assertTrue(bounds.all { it == 10_000L to 20_000L })
+        h.scheduler.stop()
+    }
+
+    @Test
+    fun stopDiscardsThePulsePhaseAndStartBeginsShortAgain() = runTest {
+        val h = Harness(
+            backgroundScope,
+            IntervalMode.PULSE.toConfig(),
+            random = ScriptedRandom(15_000),
+        )
+        h.scheduler.start()
+        runCurrent()
+        // Stops mid-cycle, right after the first LONG slot was requested.
+        advanceTimeBy(500L + 5_000 + 1)
+        assertEquals(listOf(500L, 5_000L, 15_000L), h.delays.requested)
+        h.scheduler.stop()
+
+        h.scheduler.start()
+        runCurrent()
+        advanceTimeBy(501)
+        assertEquals(
+            listOf(500L, 5_000L, 15_000L, 500L, 5_000L),
+            h.delays.requested,
+        )
+        h.scheduler.stop()
+    }
+
+    @Test
+    fun switchingIntoPulseWhileRunningResetsToTheShortSlot() = runTest {
+        val h = Harness(
+            backgroundScope,
+            IntervalMode.FIXED_30S.toConfig(),
+            random = ScriptedRandom(15_000),
+        )
+        h.scheduler.start()
+        runCurrent()
+        advanceTimeBy(501)
+        assertEquals(listOf(500L, 30_000L), h.delays.requested)
+
+        // Same scheduler, same loop: only the interval changes.
+        h.scheduler.interval = IntervalMode.PULSE.toConfig()
+        advanceTimeBy(30_000)
+        assertEquals(listOf(500L, 30_000L, 5_000L), h.delays.requested)
+        assertEquals(ProblipState.RUNNING, h.scheduler.state.value)
+        h.scheduler.stop()
+    }
+
+    @Test
+    fun leavingPulseAndComingBackResetsToTheShortSlot() = runTest {
+        val h = Harness(
+            backgroundScope,
+            IntervalMode.PULSE.toConfig(),
+            random = ScriptedRandom(15_000),
+        )
+        h.scheduler.start()
+        runCurrent()
+        // 500, SHORT 5000, LONG 15000 requested.
+        advanceTimeBy(500L + 5_000 + 1)
+        h.scheduler.interval = IntervalMode.FIXED_10S.toConfig()
+        advanceTimeBy(15_000)
+        h.scheduler.interval = IntervalMode.PULSE.toConfig()
+        advanceTimeBy(10_000)
+        assertEquals(
+            listOf(500L, 5_000L, 15_000L, 10_000L, 5_000L),
+            h.delays.requested,
+        )
+        h.scheduler.stop()
+    }
+
+    @Test
+    fun reassigningTheSamePulseConfigNeverResetsThePhase() = runTest {
+        // The service re-assigns the interval on every settings emission (volume,
+        // purchases, pool changes). An equal value must not restart the alternation.
+        val h = Harness(
+            backgroundScope,
+            IntervalMode.PULSE.toConfig(),
+            random = ScriptedRandom(15_000, 12_000),
+        )
+        h.scheduler.start()
+        runCurrent()
+        advanceTimeBy(501)
+        repeat(5) { h.scheduler.interval = IntervalMode.PULSE.toConfig() }
+        advanceTimeBy(5_000)
+        assertEquals(listOf(500L, 5_000L, 15_000L), h.delays.requested)
+        h.scheduler.stop()
+    }
+
+    @Test
+    fun losingPulseAccessWhileRunningKeepsOneLoopAndFallsBackToRandom() = runTest {
+        // What an expiring PULSE trial does: the service swaps in the free preset,
+        // never stopping the session or creating a second scheduler.
+        val h = Harness(
+            backgroundScope,
+            IntervalMode.PULSE.toConfig(),
+            random = ScriptedRandom(4_500, 6_000),
+        )
+        h.scheduler.start()
+        runCurrent()
+        advanceTimeBy(501)
+        val playsBefore = h.player.plays
+
+        h.scheduler.interval = IntervalConfig.DEFAULT
+        advanceTimeBy(5_000)
+        assertEquals(ProblipState.RUNNING, h.scheduler.state.value)
+        assertEquals(playsBefore + 1, h.player.plays)
+        // The 5 s slot that was already waiting completes, then free random 4-7.
+        assertEquals(listOf(500L, 5_000L, 4_500L), h.delays.requested)
+        advanceTimeBy(4_500)
+        assertEquals(listOf(500L, 5_000L, 4_500L, 6_000L), h.delays.requested)
+        h.scheduler.stop()
     }
 
     @Test

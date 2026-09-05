@@ -37,8 +37,16 @@ class MainActivity : ComponentActivity() {
             }
             val settings by viewModel.settings.collectAsState()
             val owned by viewModel.owned.collectAsState()
+            val access by viewModel.access.collectAsState()
             val ownsThemePack = ProductCatalog.THEME_PACK in owned
-            ProblipTheme(themeId = settings.themeId, ownsThemePack = ownsThemePack) {
+            // A theme trial expiring — or Developer Access ending — flips the
+            // granted set, which recomposes straight into the Classic palette; no
+            // Activity restart involved.
+            ProblipTheme(
+                themeId = settings.themeId,
+                ownsThemePack = ownsThemePack,
+                trials = access.grantedIds,
+            ) {
                 ProblipRoot(
                     viewModel = viewModel,
                     onStartRequested = {
@@ -46,6 +54,10 @@ class MainActivity : ComponentActivity() {
                         viewModel.start()
                     },
                     onPurchaseRequested = { productId -> billing.purchase(this, productId) },
+                    // Task behaviour stays at the Activity boundary: Compose never
+                    // casts LocalContext to an Activity. The service is untouched,
+                    // so an active session keeps blipping in the background.
+                    onMinimize = { moveTaskToBack(true) },
                 )
             }
         }

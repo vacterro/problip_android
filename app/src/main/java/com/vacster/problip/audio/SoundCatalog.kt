@@ -31,14 +31,22 @@ object SoundCatalog {
 
     /**
      * The selection that can actually play right now: persisted choice filtered
-     * to free or owned entries, never empty (falls back to the original blip).
-     * `owned` comes from Play purchases (billing package); the catalog stays
-     * billing-agnostic.
+     * to free, owned or trial-accessible entries, never empty (falls back to the
+     * original blip).
+     *
+     * `owned` comes from Play purchases (billing package) and `trials` from the
+     * five-minute trial coordinator; the catalog stays agnostic of both. Ownership
+     * and trial access are separate inputs on purpose: an expired trial must drop
+     * a sound out of the pool, a purchase must never expire.
      */
-    fun playableSelection(selected: Set<String>, owned: Set<String> = emptySet()): Set<String> {
+    fun playableSelection(
+        selected: Set<String>,
+        owned: Set<String> = emptySet(),
+        trials: Set<String> = emptySet(),
+    ): Set<String> {
         val effective = selected.filter { id ->
             val entry = byId(id)
-            entry != null && (entry.free || id in owned)
+            entry != null && (entry.free || id in owned || id in trials)
         }.toSet()
         return effective.ifEmpty { setOf(ORIGINAL.id) }
     }

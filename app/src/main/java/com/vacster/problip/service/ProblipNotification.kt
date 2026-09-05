@@ -29,7 +29,12 @@ object ProblipNotification {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    fun build(context: Context, settings: SettingsRepository.Settings, owned: Set<String> = emptySet()): Notification {
+    fun build(
+        context: Context,
+        settings: SettingsRepository.Settings,
+        owned: Set<String> = emptySet(),
+        trials: Set<String> = emptySet(),
+    ): Notification {
         val stopIntent = PendingIntent.getService(
             context,
             0,
@@ -48,7 +53,7 @@ object ProblipNotification {
             .setContentText(
                 describe(
                     settings.intervalMode,
-                    soundLabel(settings.selectedSounds, owned),
+                    soundLabel(settings.selectedSounds, owned, trials),
                     settings.volumePercent,
                 ),
             )
@@ -60,8 +65,12 @@ object ProblipNotification {
     }
 
     /** Display name for a single-sound pool, "Random pool" otherwise. Pure, unit-tested. */
-    fun soundLabel(selectedSounds: Set<String>, owned: Set<String> = emptySet()): String {
-        val playable = SoundCatalog.playableSelection(selectedSounds, owned)
+    fun soundLabel(
+        selectedSounds: Set<String>,
+        owned: Set<String> = emptySet(),
+        trials: Set<String> = emptySet(),
+    ): String {
+        val playable = SoundCatalog.playableSelection(selectedSounds, owned, trials)
         return when (playable.size) {
             1 -> SoundCatalog.byId(playable.first())?.displayName ?: "Blip"
             else -> "Random pool"
@@ -80,6 +89,8 @@ object ProblipNotification {
             IntervalMode.FIXED_15S -> "Every 15 sec"
             IntervalMode.FIXED_20S -> "Every 20 sec"
             IntervalMode.FIXED_30S -> "Every 30 sec"
+            IntervalMode.PULSE -> "Pulse 5 / 10–20 sec"
+            IntervalMode.MANUAL -> "Manual"
         }
         return "$interval • $soundLabel • $volumePercent%"
     }

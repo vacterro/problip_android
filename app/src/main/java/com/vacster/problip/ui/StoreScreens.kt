@@ -27,7 +27,10 @@ import com.vacster.problip.audio.SoundCatalog
 import com.vacster.problip.billing.ProductCatalog
 import com.vacster.problip.theme.ThemeCatalog
 
-/** Secondary screen: buy individual sounds. Pool selection stays on the main screen. */
+/**
+ * Secondary screen: buy individual sounds, or start a five-minute trial. Both
+ * actions stay visible on an unowned row — a trial must not hide the purchase.
+ */
 @Composable
 fun SoundsScreen(
     viewModel: ProblipViewModel,
@@ -39,6 +42,9 @@ fun SoundsScreen(
     val products by viewModel.products.collectAsState()
     val connection by viewModel.connection.collectAsState()
     val storeError by viewModel.billingError.collectAsState()
+    val access by viewModel.access.collectAsState()
+    val trialExpiries by viewModel.trialExpiries.collectAsState()
+    val now = rememberTrialNow(enabled = access.activeTrials.isNotEmpty())
 
     StoreScaffold(title = "SOUNDS", onBack = onBack) {
         SoundCatalog.all.forEach { entry ->
@@ -55,6 +61,22 @@ fun SoundsScreen(
                 name = entry.displayName,
                 state = state,
                 price = price,
+                // Owned and free rows have nothing to try; a pending purchase is
+                // already on its way, so pushing a trial there would be noise.
+                // Developer Access shows DEV instead of TRY, because a granted
+                // item cannot start a trial (TrialAccess.startTrial refuses).
+                trial = when (state) {
+                    StoreItemState.PURCHASABLE, StoreItemState.LOADING, StoreItemState.UNAVAILABLE ->
+                        trialLabel(
+                            free = false,
+                            owned = false,
+                            developerAccess = access.developerAccess,
+                            expiryMillis = trialExpiries[entry.id],
+                            nowMillis = now,
+                        )
+                    else -> null
+                },
+                onTrial = { viewModel.trySound(entry.id) },
                 onClick = { onPurchaseRequested(entry.id) },
             )
         }
@@ -67,9 +89,10 @@ fun SoundsScreen(
 }
 
 /**
- * Secondary screen: pick a theme, and buy the one pack that unlocks the five
- * non-classic palettes. Locked palettes stay visible but inert; the pack row is
- * the only purchase entry point.
+ * Secondary screen: pick any theme, and buy the one pack that unlocks the five
+ * non-classic palettes permanently. Every row is selectable — picking a premium
+ * palette without the pack starts its own five-minute trial — and the pack row
+ * stays the only purchase entry point.
  */
 @Composable
 fun ThemesScreen(
@@ -83,6 +106,9 @@ fun ThemesScreen(
     val products by viewModel.products.collectAsState()
     val connection by viewModel.connection.collectAsState()
     val storeError by viewModel.billingError.collectAsState()
+    val access by viewModel.access.collectAsState()
+    val trialExpiries by viewModel.trialExpiries.collectAsState()
+    val now = rememberTrialNow(enabled = access.activeTrials.isNotEmpty())
 
     val ownsPack = ProductCatalog.THEME_PACK in owned
     val packPrice = products[ProductCatalog.THEME_PACK]?.formattedPrice
@@ -94,21 +120,29 @@ fun ThemesScreen(
         price = packPrice,
         connection = connection,
     )
+    // The selection marker follows the EFFECTIVE theme, so an expired trial shows
+    // Classic selected here without any Activity restart.
+    val effectiveTheme = ThemeCatalog.effective(settings.themeId, ownsPack, access.grantedIds).id
 
     StoreScaffold(title = "THEMES", onBack = onBack) {
         ThemeCatalog.all.forEach { entry ->
-            val unlocked = entry.free || ownsPack
             ThemePickRow(
                 name = entry.displayName,
-                selected = entry.id == settings.themeId,
-                unlocked = unlocked,
+                selected = entry.id == effectiveTheme,
+                label = trialLabel(
+                    free = entry.free,
+                    owned = ownsPack,
+                    developerAccess = access.developerAccess,
+                    expiryMillis = trialExpiries[entry.id],
+                    nowMillis = now,
+                ),
                 onSelect = { viewModel.setTheme(entry.id) },
             )
         }
 
-        SectionLabel("THEMES PACK")
+        SectionLabel("CUSTOMIZATION PACK")
         StoreRow(
-            name = "All 5 extra palettes",
+            name = "All extra palettes + Manual & Pulse Interval",
             state = packState,
             price = packPrice,
             onClick = { onPurchaseRequested(ProductCatalog.THEME_PACK) },
@@ -122,7 +156,7 @@ fun ThemesScreen(
 }
 
 @Composable
-private fun StoreScaffold(
+internal fun StoreScaffold(
     title: String,
     onBack: () -> Unit,
     content: @Composable () -> Unit,
@@ -162,13 +196,18 @@ private fun StoreScaffold(
     }
 }
 
-/** One purchasable line. Only PURCHASABLE rows react to a tap. */
+/**
+ * One purchasable line. Only PURCHASABLE rows react to a tap on the row itself;
+ * [trial] is a separate tap target so BUY and TRY never compete for it.
+ */
 @Composable
 private fun StoreRow(
     name: String,
     state: StoreItemState,
     price: String?,
     onClick: () -> Unit,
+    trial: String? = null,
+    onTrial: () -> Unit = {},
 ) {
     val buyable = state == StoreItemState.PURCHASABLE
     val label = storeItemLabel(state, price)
@@ -191,9 +230,21 @@ private fun StoreRow(
             fontSize = 13.sp,
         )
         Spacer(modifier = Modifier.weight(1f))
+        if (trial != null) {
+            Text(
+                text = trial,
+                color = P.Gold,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp,
+                letterSpacing = 1.sp,
+                modifier = Modifier
+                    .clickable { onTrial() }
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+            )
+        }
         if (label != null) {
             Text(
-                text = label,
+                text = if (buyable) "BUY $label" else label,
                 color = when (state) {
                     StoreItemState.PURCHASABLE -> P.Gold
                     StoreItemState.OWNED -> P.Success
@@ -209,38 +260,43 @@ private fun StoreRow(
     }
 }
 
+/**
+ * One theme choice. Always selectable: an unowned premium palette starts its
+ * trial on tap, so there is no inert row any more. [label] shows OWNED,
+ * "TRIAL mm:ss" or "TRY 5 MIN".
+ */
 @Composable
 private fun ThemePickRow(
     name: String,
     selected: Boolean,
-    unlocked: Boolean,
+    label: String?,
     onSelect: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = unlocked) { onSelect() }
+            .clickable { onSelect() }
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = if (selected && unlocked) "(*)" else "( )",
-            color = if (unlocked) P.Gold else P.Muted,
+            text = if (selected) "(*)" else "( )",
+            color = P.Gold,
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp,
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = name,
-            color = if (unlocked) P.TextMain else P.Muted,
+            color = if (selected) P.TextMain else P.TextDim,
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp,
         )
-        if (!unlocked) {
+        if (label != null) {
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "IN PACK",
-                color = P.Muted,
+                text = label,
+                color = if (label == "OWNED") P.Success else P.Gold,
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
                 letterSpacing = 1.sp,

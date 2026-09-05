@@ -4,8 +4,11 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
 import com.vacster.problip.core.KotlinRandomSource
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
-import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * SoundPool engine for short blips. One instance owns exactly one SoundPool;
@@ -51,10 +54,35 @@ class SoundPoolAudioPlayer(context: Context) : AudioPlayer {
     @Volatile
     private var gain = Volume.DEFAULT_GAIN
 
-    /** Sample id of the load currently awaited, for filtering stale events. */
-    private val expectedSampleId = AtomicInteger(0)
+    /**
+     * Load statuses that arrived before their waiter existed, and the waiters
+     * themselves, keyed by sample id. Guarded by [lock].
+     *
+     * SoundPool can dispatch the completion event from its own thread before
+     * load() has even returned the sample id, so a single "expected id" field
+     * loses the event and leaves the loading coroutine suspended forever. Every
+     * load now has its own slot, and an early status is buffered until its
+     * waiter shows up.
+     */
+    private val completed = HashMap<Int, Int>()
+    private val waiters = HashMap<Int, CancellableContinuation<Int>>()
 
-    override suspend fun prepare(soundIds: Set<String>): Boolean {
+    /** One pool switch at a time: concurrent prepares double-load the same sample. */
+    private val prepareLock = Mutex()
+
+    init {
+        soundPool.setOnLoadCompleteListener { _, sampleId, status ->
+            val waiter = synchronized(lock) {
+                waiters.remove(sampleId) ?: run {
+                    completed[sampleId] = status
+                    null
+                }
+            }
+            waiter?.resumeWith(Result.success(status))
+        }
+    }
+
+    override suspend fun prepare(soundIds: Set<String>): Boolean = prepareLock.withLock {
         val entries = soundIds.mapNotNull { SoundCatalog.byId(it) }
         if (entries.size != soundIds.size) return false // unknown id: refuse, never crash
         val wanted = entries.map { it.id }
@@ -77,27 +105,40 @@ class SoundPoolAudioPlayer(context: Context) : AudioPlayer {
     }
 
     private suspend fun load(entry: SoundEntry): Boolean {
-        val resId = entry.resId
-        val status: Int = suspendCancellableCoroutine { cont ->
-            // Register the listener before load(): the completion event can be
-            // dispatched from another thread as soon as load() returns.
-            soundPool.setOnLoadCompleteListener { _, sampleId, status ->
-                if (sampleId != 0 && sampleId == expectedSampleId.get() && cont.isActive) {
-                    cont.resumeWith(Result.success(status))
-                }
-            }
-            val id = synchronized(lock) {
-                if (released) 0 else soundPool.load(appContext, resId, PRIORITY)
-            }
-            if (id == 0) {
-                // Rejected outright (or released underneath us): no event will come.
-                cont.resumeWith(Result.success(LOAD_REJECTED))
-                return@suspendCancellableCoroutine
-            }
-            expectedSampleId.set(id)
-            synchronized(lock) { loaded[entry.id] = id }
+        val sampleId = synchronized(lock) {
+            if (released) 0 else soundPool.load(appContext, entry.resId, PRIORITY)
         }
-        return status == 0
+        // Rejected outright (or released underneath us): no event will ever come.
+        if (sampleId == 0) return false
+        // A load that never completes must not hang startup forever; the session
+        // reports a sound failure instead of staying in STARTING.
+        val status = withTimeoutOrNull(LOAD_TIMEOUT_MS) { awaitLoad(sampleId) }
+        if (status != LOAD_SUCCESS) {
+            // Never keep a half-loaded sample: the next prepare() would treat the
+            // sound as ready, and play() would hand SoundPool a dead sample id.
+            synchronized(lock) {
+                waiters.remove(sampleId)
+                completed.remove(sampleId)
+                if (!released) soundPool.unload(sampleId)
+            }
+            return false
+        }
+        synchronized(lock) {
+            if (released) return false
+            loaded[entry.id] = sampleId
+        }
+        return true
+    }
+
+    private suspend fun awaitLoad(sampleId: Int): Int = suspendCancellableCoroutine { cont ->
+        val early = synchronized(lock) {
+            completed.remove(sampleId) ?: run {
+                waiters[sampleId] = cont
+                null
+            }
+        }
+        if (early != null) cont.resumeWith(Result.success(early))
+        cont.invokeOnCancellation { synchronized(lock) { waiters.remove(sampleId) } }
     }
 
     override fun play(): Boolean {
@@ -119,6 +160,7 @@ class SoundPoolAudioPlayer(context: Context) : AudioPlayer {
             released = true
             loaded.clear()
             activePool = emptyList()
+            completed.clear()
             soundPool.release()
         }
     }
@@ -127,6 +169,7 @@ class SoundPoolAudioPlayer(context: Context) : AudioPlayer {
         private const val PRIORITY = 1
         private const val NO_LOOP = 0
         private const val NORMAL_RATE = 1f
-        private const val LOAD_REJECTED = Int.MIN_VALUE
+        private const val LOAD_SUCCESS = 0
+        private const val LOAD_TIMEOUT_MS = 5_000L
     }
 }
