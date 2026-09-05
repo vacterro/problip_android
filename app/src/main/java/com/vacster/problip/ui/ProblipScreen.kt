@@ -6,19 +6,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderColors
 import androidx.compose.material3.SliderDefaults
@@ -33,20 +33,27 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.vacster.problip.audio.SoundCatalog
-import com.vacster.problip.audio.SoundEntry
 import com.vacster.problip.core.IntervalMode
 import com.vacster.problip.core.PremiumInterval
 import com.vacster.problip.core.ProblipState
@@ -82,10 +89,63 @@ internal object P {
         @Composable get() = LocalProblipColors.current.Danger
 }
 
+/** Repositions the same three groups for short, wide viewports; no duplicate controls. */
+@Composable
+private fun MainControlLayout(
+    modifier: Modifier,
+    sideBySide: Boolean,
+    narrowLandscape: Boolean,
+    gap: Dp,
+    volume: @Composable () -> Unit,
+    interval: @Composable () -> Unit,
+    secondary: @Composable () -> Unit,
+) {
+    Layout(
+        modifier = modifier,
+        content = {
+            Box { volume() }
+            Box { interval() }
+            Box { secondary() }
+        },
+    ) { measurables, constraints ->
+        val spacing = gap.roundToPx()
+        val intervalWidth =
+            if (sideBySide) {
+                ((constraints.maxWidth - spacing) * if (narrowLandscape) 0.55f else 0.5f)
+                    .roundToInt()
+            } else constraints.maxWidth
+        val secondaryWidth =
+            if (sideBySide) constraints.maxWidth - spacing - intervalWidth else constraints.maxWidth
+        val (volumePlaceable, intervalPlaceable, secondaryPlaceable) =
+            measurables.mapIndexed { index, measurable ->
+                measurable.measure(
+                    Constraints(maxWidth = if (index == 1) intervalWidth else secondaryWidth)
+                )
+            }
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            if (sideBySide) {
+                intervalPlaceable.placeRelative(0, 0)
+                volumePlaceable.placeRelative(intervalWidth + spacing, 0)
+                secondaryPlaceable.placeRelative(
+                    intervalWidth + spacing,
+                    volumePlaceable.height + spacing,
+                )
+            } else {
+                volumePlaceable.placeRelative(0, 0)
+                intervalPlaceable.placeRelative(0, volumePlaceable.height + spacing)
+                secondaryPlaceable.placeRelative(
+                    0,
+                    volumePlaceable.height + intervalPlaceable.height + 2 * spacing,
+                )
+            }
+        }
+    }
+}
+
 /**
- * The utility screen: status, volume, interval, the playable sound pool and
- * START/STOP. No prices and no locked rows live here — the store is secondary
- * (W11), so buying happens on the Sounds and Themes screens.
+ * The utility screen: status, volume, interval, the playable sound pool and START/STOP. No prices
+ * and no locked rows live here — the store is secondary (W11), so buying happens on the Sounds and
+ * Themes screens.
  */
 @Composable
 fun ProblipScreen(
@@ -104,20 +164,21 @@ fun ProblipScreen(
     val trialExpiries by viewModel.trialExpiries.collectAsState()
 
     val running = state == ProblipState.STARTING || state == ProblipState.RUNNING
-    // The whole catalog is visible: tapping a locked sound starts its trial. The
-    // checkmarks follow the EFFECTIVE pool, so an expired trial visibly drops out
-    // and the Original-Blip fallback is what the user sees selected.
-    val effectivePool = SoundCatalog.playableSelection(settings.selectedSounds, owned, access.grantedIds)
+    // Summarize the EFFECTIVE pool, including the Original-Blip fallback after
+    // trial expiry. Selection and the full catalog live on the Sounds screen.
+    val effectivePool =
+        SoundCatalog.playableSelection(settings.selectedSounds, owned, access.grantedIds)
     val now = rememberTrialNow(enabled = access.activeTrials.isNotEmpty())
     val manualAccessible = access.grantsManualInterval(viewModel.ownsThemePack())
     val pulseAccessible = access.grantsPulseInterval(viewModel.ownsThemePack())
     // A premium pick whose trial died shows as the free preset, matching what the
     // scheduler is actually running.
-    val effectiveMode = PremiumInterval.effectiveMode(
-        mode = settings.intervalMode,
-        manualAccessible = manualAccessible,
-        pulseAccessible = pulseAccessible,
-    )
+    val effectiveMode =
+        PremiumInterval.effectiveMode(
+            mode = settings.intervalMode,
+            manualAccessible = manualAccessible,
+            pulseAccessible = pulseAccessible,
+        )
 
     // Hidden Developer Access chord. Deliberately not persisted: rotation or
     // process recreation cancels it.
@@ -125,172 +186,254 @@ fun ProblipScreen(
     val gestureScope = rememberCoroutineScope()
     var developerUnlocked by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(P.Bg)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(P.Bg)) {
+        val compact = maxHeight < 560.dp || LocalDensity.current.fontScale > 1.15f
+        val narrowLandscape = maxWidth in 420.dp..<520.dp && maxWidth > maxHeight
+        val sideBySide = (maxWidth >= 520.dp || narrowLandscape) && maxHeight < 420.dp
+        val gap = if (compact) 3.dp else 8.dp
+        val presetHeight = if (compact) 36.dp else 44.dp
+        Column(
+            modifier = Modifier.fillMaxSize().padding(if (compact) 6.dp else 12.dp),
+            verticalArrangement = Arrangement.spacedBy(gap),
         ) {
-            Text(
-                text = "PROBLIP",
-                color = P.Gold,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                // No visible hint, no long-press menu: the title is just a title
-                // until it has been held for twenty seconds.
-                modifier = Modifier.pointerInput(Unit) {
-                    detectTapGestures(
-                        onPress = {
-                            gesture.titlePressed()
-                            val arming = gestureScope.launch {
-                                delay(DeveloperGesture.HOLD_MILLIS)
-                                gesture.titleHeldFor(DeveloperGesture.HOLD_MILLIS)
-                            }
-                            // Keeps observing this pointer while the timer runs;
-                            // release AND cancellation both disarm.
-                            tryAwaitRelease()
-                            arming.cancel()
-                            gesture.titleReleased()
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 32.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "PROBLIP",
+                    color = P.Gold,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    lineHeight = 24.sp,
+                    maxLines = 1,
+                    // No visible hint, no long-press menu: the title is just a title
+                    // until it has been held for twenty seconds.
+                    modifier =
+                        Modifier.pointerInput(Unit) {
+                            detectTapGestures(
+                                onPress = {
+                                    gesture.titlePressed()
+                                    val arming =
+                                        gestureScope.launch {
+                                            delay(DeveloperGesture.HOLD_MILLIS)
+                                            gesture.titleHeldFor(DeveloperGesture.HOLD_MILLIS)
+                                        }
+                                    // Keeps observing this pointer while the timer runs;
+                                    // release AND cancellation both disarm.
+                                    tryAwaitRelease()
+                                    arming.cancel()
+                                    gesture.titleReleased()
+                                }
+                            )
                         },
-                    )
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (access.developerAccess) {
+                        Text(
+                            text = DEVELOPER_LABEL,
+                            color = P.Gold,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 10.sp,
+                            lineHeight = 12.sp,
+                            maxLines = 1,
+                        )
+                    }
+                    StatusText(state)
+                }
+            }
+
+            // This weighted body is measured AFTER the header and action area. Long
+            // error messages and optional controls can never displace START/STOP.
+            MainControlLayout(
+                // Guard the action area even if an IME or an exceptionally small
+                // multi-window viewport leaves less than the minimum body size.
+                modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds(),
+                sideBySide = sideBySide,
+                narrowLandscape = narrowLandscape,
+                gap = gap,
+                volume = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        SectionLabel(if (narrowLandscape) "VOL" else "VOLUME")
+                        // A drag emits ~60 values per second and every one of them used to be
+                        // a DataStore write. The thumb now moves on local state and the gain
+                        // is persisted once, on release. Keyed on the persisted value so an
+                        // external change still re-seeds the slider.
+                        var dragPercent by
+                            remember(settings.volumePercent) {
+                                mutableIntStateOf(settings.volumePercent)
+                            }
+                        Slider(
+                            value = dragPercent / 100f,
+                            onValueChange = { dragPercent = (it * 100).roundToInt() },
+                            onValueChangeFinished = { viewModel.setVolume(dragPercent) },
+                            modifier = Modifier.weight(1f),
+                            colors = sliderColors(),
+                        )
+                        Text(
+                            text = "$dragPercent%",
+                            color = P.TextMain,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp,
+                            lineHeight = 18.sp,
+                            maxLines = 1,
+                        )
+                    }
+                },
+                interval = {
+                    Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            SectionLabel("INTERVAL")
+                            val featureId =
+                                when (effectiveMode) {
+                                    IntervalMode.PULSE -> TrialAccess.FEATURE_PULSE_INTERVAL
+                                    IntervalMode.MANUAL -> TrialAccess.FEATURE_MANUAL_INTERVAL
+                                    else -> null
+                                }
+                            if (featureId != null) {
+                                IntervalTrialLabel(
+                                    featureId = featureId,
+                                    owned = viewModel.ownsThemePack(),
+                                    developerAccess = access.developerAccess,
+                                    trialExpiries = trialExpiries,
+                                    nowMillis = now,
+                                )
+                            }
+                        }
+                        IntervalMode.entries.chunked(4).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                row.forEach { mode ->
+                                    PresetButton(
+                                        label = mode.label(),
+                                        selected = effectiveMode == mode,
+                                        onClick = { viewModel.setIntervalMode(mode) },
+                                        modifier = Modifier.weight(1f).height(presetHeight),
+                                        narrow = narrowLandscape,
+                                    )
+                                }
+                            }
+                        }
+                        // Reserve one detail row for every mode: MANUAL, trial expiry and PULSE
+                        // do not move either the sound selector or the primary actions.
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(34.dp),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            if (effectiveMode == IntervalMode.PULSE) {
+                                Text(
+                                    text = "5s / 10-20s",
+                                    color = P.TextDim,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp,
+                                    lineHeight = 14.sp,
+                                    maxLines = 1,
+                                )
+                            }
+                            if (effectiveMode == IntervalMode.MANUAL) {
+                                ManualIntervalEditor(
+                                    fromSeconds = settings.manualFromSeconds,
+                                    toSeconds = settings.manualToSeconds,
+                                    onCommit = viewModel::setManualInterval,
+                                )
+                            }
+                        }
+                    }
+                },
+                secondary = {
+                    Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+                        val premiumSounds =
+                            effectivePool.mapNotNull(SoundCatalog::byId).filterNot { it.free }
+                        // A mixed pool shows its earliest active trial; per-sound
+                        // ownership and timers remain available in Sounds.
+                        val firstExpiry =
+                            premiumSounds
+                                .mapNotNull { entry ->
+                                    trialExpiries[entry.id]?.takeIf {
+                                        entry.id !in owned && it > now
+                                    }
+                                }
+                                .minOrNull()
+                        SoundSummaryRow(
+                            summary =
+                                if (effectivePool.size == 1) {
+                                    SoundCatalog.byId(effectivePool.first())!!.displayName
+                                } else {
+                                    if (narrowLandscape) "${effectivePool.size} sounds"
+                                    else "${effectivePool.size} sounds selected"
+                                },
+                            label =
+                                trialLabel(
+                                    free = premiumSounds.isEmpty(),
+                                    owned = premiumSounds.all { it.id in owned },
+                                    developerAccess = access.developerAccess,
+                                    expiryMillis = firstExpiry,
+                                    nowMillis = now,
+                                ),
+                            onClick = onOpenSounds,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                            NavRow(
+                                if (narrowLandscape) "THEME" else "THEMES",
+                                onOpenThemes,
+                                Modifier.weight(1f).semantics { contentDescription = "THEMES" },
+                            )
+                            NavRow(
+                                if (narrowLandscape) "SET" else "SETTINGS",
+                                onOpenSettings,
+                                Modifier.weight(1f).semantics { contentDescription = "SETTINGS" },
+                            )
+                        }
+                    }
                 },
             )
-            StatusText(state)
-        }
 
-        SectionLabel("VOLUME")
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // A drag emits ~60 values per second and every one of them used to be
-            // a DataStore write. The thumb now moves on local state and the gain
-            // is persisted once, on release. Keyed on the persisted value so an
-            // external change still re-seeds the slider.
-            var dragPercent by remember(settings.volumePercent) {
-                mutableIntStateOf(settings.volumePercent)
-            }
-            Slider(
-                value = dragPercent / 100f,
-                onValueChange = { dragPercent = (it * 100).roundToInt() },
-                onValueChangeFinished = { viewModel.setVolume(dragPercent) },
-                modifier = Modifier.weight(1f),
-                colors = sliderColors(),
-            )
-            Text(
-                text = "$dragPercent%",
-                color = P.TextMain,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 14.sp,
-                modifier = Modifier.width(44.dp),
-            )
-        }
-
-        SectionLabel("INTERVAL")
-        // [4-7] [5] [10] [15] / [20] [30] [PULSE] / [MANUAL]
-        listOf(
-            IntervalMode.entries.take(4),
-            IntervalMode.entries.drop(4).take(3),
-            IntervalMode.entries.drop(7),
-        ).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.forEach { mode ->
-                    PresetButton(
-                        label = mode.label(),
-                        selected = effectiveMode == mode,
-                        onClick = { viewModel.setIntervalMode(mode) },
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // Always reserve one line so an error cannot cause a layout jump.
+                Text(
+                    text = error.orEmpty(),
+                    color = P.Danger,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    MinimizeButton(onClick = onMinimize, modifier = Modifier.weight(1f))
+                    BigButton(
+                        text = if (running) "STOP" else "START",
+                        modifier = Modifier.weight(1.3f),
+                        onClick = {
+                            // The armed chord consumes this tap: it must neither start nor
+                            // stop the session.
+                            if (gesture.consumeIfArmedAndTitleStillHeld()) {
+                                viewModel.enableDeveloperAccess()
+                                developerUnlocked = true
+                            } else if (running) {
+                                viewModel.stop()
+                            } else {
+                                onStartRequested()
+                            }
+                        },
                     )
                 }
             }
         }
-        if (effectiveMode == IntervalMode.PULSE) {
-            Text(
-                text = "5s / 10-20s",
-                color = P.TextDim,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp,
-            )
-            IntervalTrialLabel(
-                featureId = TrialAccess.FEATURE_PULSE_INTERVAL,
-                owned = viewModel.ownsThemePack(),
-                developerAccess = access.developerAccess,
-                trialExpiries = trialExpiries,
-                nowMillis = now,
-            )
-        }
-        if (effectiveMode == IntervalMode.MANUAL) {
-            ManualIntervalEditor(
-                fromSeconds = settings.manualFromSeconds,
-                toSeconds = settings.manualToSeconds,
-                onCommit = viewModel::setManualInterval,
-            )
-            IntervalTrialLabel(
-                featureId = TrialAccess.FEATURE_MANUAL_INTERVAL,
-                owned = viewModel.ownsThemePack(),
-                developerAccess = access.developerAccess,
-                trialExpiries = trialExpiries,
-                nowMillis = now,
-            )
-        }
-
-        SectionLabel("SOUND")
-        SoundCatalog.all.forEach { entry ->
-            PoolRow(
-                entry = entry,
-                checked = entry.id in effectivePool,
-                label = trialLabel(
-                    free = entry.free,
-                    owned = entry.id in owned,
-                    developerAccess = access.developerAccess,
-                    expiryMillis = trialExpiries[entry.id],
-                    nowMillis = now,
-                ),
-                onToggle = { viewModel.toggleSound(entry.id) },
-            )
-        }
-
-        NavRow(label = "SOUNDS", onClick = onOpenSounds)
-        NavRow(label = "THEMES", onClick = onOpenThemes)
-        NavRow(label = "SETTINGS", onClick = onOpenSettings)
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        error?.let {
-            Text(
-                text = it,
-                color = P.Danger,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
-            )
-        }
-
-        // Backgrounds the app without stopping the session; the primary action
-        // stays START/STOP directly below it.
-        MinimizeButton(onClick = onMinimize)
-
-        BigButton(
-            text = if (running) "STOP" else "START",
-            onClick = {
-                // The armed chord consumes this tap: it must neither start nor
-                // stop the session.
-                if (gesture.consumeIfArmedAndTitleStillHeld()) {
-                    viewModel.enableDeveloperAccess()
-                    developerUnlocked = true
-                } else if (running) {
-                    viewModel.stop()
-                } else {
-                    onStartRequested()
-                }
-            },
-        )
     }
 
     if (developerUnlocked) {
@@ -299,12 +442,12 @@ fun ProblipScreen(
 }
 
 /**
- * Access label under a premium interval preset: "TRIAL 04:37" while its five
- * minutes run, "TRY 5 MIN" when a tap would start them, "OWNED" once the
- * Customization Pack is bought, "DEV" while Developer Access grants it.
+ * Access label beside the interval heading: "TRIAL 04:37" while its five minutes run, "TRY 5 MIN"
+ * when a tap would start them, "OWNED" once the Customization Pack is bought, "DEV" while Developer
+ * Access grants it.
  *
- * [owned] and [developerAccess] stay separate: neither has a timer, so neither
- * may advertise a trial, but only a purchase may claim ownership.
+ * [owned] and [developerAccess] stay separate: neither has a timer, so neither may advertise a
+ * trial, but only a purchase may claim ownership.
  */
 @Composable
 private fun IntervalTrialLabel(
@@ -314,29 +457,28 @@ private fun IntervalTrialLabel(
     trialExpiries: Map<String, Long>,
     nowMillis: Long,
 ) {
-    val label = trialLabel(
-        free = false,
-        owned = owned,
-        developerAccess = developerAccess,
-        expiryMillis = trialExpiries[featureId],
-        nowMillis = nowMillis,
-    ) ?: return
+    val label =
+        trialLabel(
+            free = false,
+            owned = owned,
+            developerAccess = developerAccess,
+            expiryMillis = trialExpiries[featureId],
+            nowMillis = nowMillis,
+        ) ?: return
     Text(
         text = label,
         color = P.Gold,
         fontFamily = FontFamily.Monospace,
         fontSize = 10.sp,
+        lineHeight = 12.sp,
         letterSpacing = 1.sp,
+        maxLines = 1,
     )
 }
 
 /** FROM/TO seconds for the premium manual interval. Only validated values persist. */
 @Composable
-private fun ManualIntervalEditor(
-    fromSeconds: Int,
-    toSeconds: Int,
-    onCommit: (Int, Int) -> Unit,
-) {
+private fun ManualIntervalEditor(fromSeconds: Int, toSeconds: Int, onCommit: (Int, Int) -> Unit) {
     // Keyed on the persisted values so an external change re-seeds the fields.
     var fromText by remember(fromSeconds) { mutableStateOf(fromSeconds.toString()) }
     var toText by remember(toSeconds) { mutableStateOf(toSeconds.toString()) }
@@ -345,7 +487,7 @@ private fun ManualIntervalEditor(
     val commit = {
         onCommit(fromText.toIntOrNull() ?: fromSeconds, toText.toIntOrNull() ?: toSeconds)
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         SecondsField(
             label = "FROM",
             value = fromText,
@@ -379,39 +521,42 @@ private fun SecondsField(
             color = P.TextDim,
             fontFamily = FontFamily.Monospace,
             fontSize = 11.sp,
+            lineHeight = 14.sp,
         )
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
-            textStyle = TextStyle(
-                color = P.TextMain,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 13.sp,
-            ),
+            textStyle =
+                TextStyle(
+                    color = P.TextMain,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp,
+                    lineHeight = 16.sp,
+                ),
             cursorBrush = SolidColor(P.Gold),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Number,
-                imeAction = ImeAction.Done,
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = {
-                    onCommit()
-                    focus.clearFocus()
-                },
-            ),
-            modifier = Modifier
-                .width(56.dp)
-                .background(P.Raised)
-                .border(1.dp, P.Bevel)
-                .padding(horizontal = 6.dp, vertical = 6.dp)
-                .onFocusChanged { if (!it.isFocused) onCommit() },
+            keyboardOptions =
+                KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+            keyboardActions =
+                KeyboardActions(
+                    onDone = {
+                        onCommit()
+                        focus.clearFocus()
+                    }
+                ),
+            modifier =
+                Modifier.width(56.dp)
+                    .background(P.Raised)
+                    .border(1.dp, P.Bevel)
+                    .padding(horizontal = 6.dp, vertical = 6.dp)
+                    .onFocusChanged { if (!it.isFocused) onCommit() },
         )
         Text(
             text = "s",
             color = P.TextDim,
             fontFamily = FontFamily.Monospace,
             fontSize = 11.sp,
+            lineHeight = 14.sp,
         )
     }
 }
@@ -459,17 +604,21 @@ private fun IntervalMode.label(): String = when (this) {
 
 @Composable
 private fun StatusText(state: ProblipState) {
-    val (text, color) = when (state) {
-        ProblipState.STARTING, ProblipState.RUNNING -> "RUNNING" to P.Success
-        ProblipState.ERROR -> "ERROR" to P.Danger
-        ProblipState.STOPPED -> "OFF" to P.Muted
-    }
+    val (text, color) =
+        when (state) {
+            ProblipState.STARTING,
+            ProblipState.RUNNING -> "RUNNING" to P.Success
+            ProblipState.ERROR -> "ERROR" to P.Danger
+            ProblipState.STOPPED -> "OFF" to P.Muted
+        }
     Text(
         text = text,
         color = color,
         fontFamily = FontFamily.Monospace,
         fontWeight = FontWeight.Bold,
         fontSize = 14.sp,
+        lineHeight = 18.sp,
+        maxLines = 1,
     )
 }
 
@@ -480,90 +629,111 @@ internal fun SectionLabel(text: String) {
         color = P.TextDim,
         fontFamily = FontFamily.Monospace,
         fontSize = 11.sp,
+        lineHeight = 14.sp,
         letterSpacing = 1.sp,
     )
 }
 
 @Composable
-private fun sliderColors(): SliderColors = SliderDefaults.colors(
-    thumbColor = P.Gold,
-    activeTrackColor = P.Gold,
-    inactiveTrackColor = P.Raised,
-)
+private fun sliderColors(): SliderColors =
+    SliderDefaults.colors(
+        thumbColor = P.Gold,
+        activeTrackColor = P.Gold,
+        inactiveTrackColor = P.Raised,
+    )
 
 @Composable
-private fun PresetButton(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun PresetButton(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    narrow: Boolean,
+) {
     Box(
-        modifier = Modifier
-            .background(if (selected) P.Compare else P.Raised)
-            .border(1.dp, P.Bevel)
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+        modifier =
+            modifier
+                .background(if (selected) P.Compare else P.Raised)
+                .border(1.dp, P.Bevel)
+                .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
             color = if (selected) P.Gold else P.TextMain,
             fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
+            fontSize = if (narrow) 11.sp else 12.sp,
+            lineHeight = 15.sp,
+            maxLines = 1,
         )
     }
 }
 
 /**
- * Pool membership toggle for one catalog sound. [label] carries the access state
- * (OWNED / TRIAL mm:ss / TRY 5 MIN); tapping a locked row starts its trial.
+ * One compact entry point to the sound pool. Access text has its own fixed line beside SOUND, so a
+ * countdown never squeezes the selected-pool summary.
  */
 @Composable
-private fun PoolRow(
-    entry: SoundEntry,
-    checked: Boolean,
-    label: String?,
-    onToggle: () -> Unit,
-) {
+private fun SoundSummaryRow(summary: String, label: String?, onClick: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onToggle() }
-            .padding(vertical = 2.dp),
+        modifier =
+            Modifier.fillMaxWidth()
+                .height(48.dp)
+                .background(P.Surface)
+                .border(1.dp, P.Bevel)
+                .clickable { onClick() }
+                .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                SectionLabel("SOUND")
+                if (label != null) {
+                    Text(
+                        text = label,
+                        color = P.Gold,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp,
+                        lineHeight = 12.sp,
+                        maxLines = 1,
+                    )
+                }
+            }
+            Text(
+                text = summary,
+                color = P.TextMain,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 13.sp,
+                lineHeight = 16.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Text(
-            text = if (checked) "[x]" else "[ ]",
+            text = ">",
             color = P.Gold,
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp,
+            lineHeight = 16.sp,
+            modifier = Modifier.padding(start = 8.dp),
         )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = entry.displayName,
-            color = if (checked) P.TextMain else P.TextDim,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
-        )
-        if (label != null) {
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = label,
-                color = if (label == "OWNED") P.Success else P.Gold,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
-                letterSpacing = 1.sp,
-            )
-        }
     }
 }
 
 /** Entry point to a secondary screen; carries no price or ownership text. */
 @Composable
-private fun NavRow(label: String, onClick: () -> Unit) {
+private fun NavRow(label: String, onClick: () -> Unit, modifier: Modifier) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(P.Surface)
-            .border(1.dp, P.Bevel)
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier =
+            modifier
+                .height(36.dp)
+                .background(P.Surface)
+                .border(1.dp, P.Bevel)
+                .clickable { onClick() }
+                .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -571,7 +741,9 @@ private fun NavRow(label: String, onClick: () -> Unit) {
             color = P.TextMain,
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp,
+            lineHeight = 16.sp,
             letterSpacing = 1.sp,
+            maxLines = 1,
         )
         Spacer(modifier = Modifier.weight(1f))
         Text(
@@ -579,24 +751,23 @@ private fun NavRow(label: String, onClick: () -> Unit) {
             color = P.Gold,
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp,
+            lineHeight = 16.sp,
         )
     }
 }
 
 /**
- * Secondary action: obvious and next to START/STOP, never hidden in a menu, and
- * always spelled out because an icon alone is ambiguous. Deliberately quieter
- * than [BigButton] so the primary action stays primary.
+ * Secondary action: obvious and next to START/STOP, never hidden in a menu, and always spelled out
+ * because an icon alone is ambiguous. Deliberately quieter than [BigButton] so the primary action
+ * stays primary.
  */
 @Composable
-private fun MinimizeButton(onClick: () -> Unit) {
+private fun MinimizeButton(onClick: () -> Unit, modifier: Modifier) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(40.dp)
-            .background(P.Surface)
-            .border(1.dp, P.Bevel)
-            .clickable { onClick() },
+        modifier =
+            modifier.height(48.dp).background(P.Surface).border(1.dp, P.Bevel).clickable {
+                onClick()
+            },
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -604,20 +775,23 @@ private fun MinimizeButton(onClick: () -> Unit) {
             color = P.TextMain,
             fontFamily = FontFamily.Monospace,
             fontSize = 13.sp,
-            letterSpacing = 2.sp,
+            lineHeight = 16.sp,
+            letterSpacing = 1.sp,
+            maxLines = 1,
         )
     }
 }
 
 @Composable
-internal fun BigButton(text: String, onClick: () -> Unit) {
+internal fun BigButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp)
-            .background(P.Raised)
-            .border(1.dp, P.Bevel)
-            .clickable { onClick() },
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .background(P.Raised)
+                .border(1.dp, P.Bevel)
+                .clickable { onClick() },
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -626,7 +800,9 @@ internal fun BigButton(text: String, onClick: () -> Unit) {
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
+            lineHeight = 22.sp,
             letterSpacing = 2.sp,
+            maxLines = 1,
         )
     }
 }

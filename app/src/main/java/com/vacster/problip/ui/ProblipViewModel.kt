@@ -156,7 +156,7 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Start a sound's trial and select it, never deselect. The store screen's TRY
      * action needs this one-way form: a second tap there must not drop the sound
-     * out of the pool the way the main screen's toggle does.
+     * out of the pool the way the sound-selection toggle does.
      */
     fun trySound(soundId: String) {
         SoundCatalog.byId(soundId) ?: return

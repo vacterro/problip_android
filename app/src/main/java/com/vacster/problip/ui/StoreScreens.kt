@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vacster.problip.audio.SoundEntry
 import com.vacster.problip.audio.SoundCatalog
 import com.vacster.problip.billing.ProductCatalog
 import com.vacster.problip.theme.ThemeCatalog
@@ -37,6 +38,7 @@ fun SoundsScreen(
     onBack: () -> Unit,
     onPurchaseRequested: (String) -> Unit,
 ) {
+    val settings by viewModel.settings.collectAsState()
     val owned by viewModel.owned.collectAsState()
     val pending by viewModel.pending.collectAsState()
     val products by viewModel.products.collectAsState()
@@ -46,8 +48,21 @@ fun SoundsScreen(
     val trialExpiries by viewModel.trialExpiries.collectAsState()
     val now = rememberTrialNow(enabled = access.activeTrials.isNotEmpty())
 
+    val effectivePool = SoundCatalog.playableSelection(settings.selectedSounds, owned, access.grantedIds)
     StoreScaffold(title = "SOUNDS", onBack = onBack) {
         SoundCatalog.all.forEach { entry ->
+            PoolRow(
+                entry = entry,
+                checked = entry.id in effectivePool,
+                label = trialLabel(
+                    free = entry.free,
+                    owned = entry.id in owned,
+                    developerAccess = access.developerAccess,
+                    expiryMillis = trialExpiries[entry.id],
+                    nowMillis = now,
+                ),
+                onToggle = { viewModel.toggleSound(entry.id) },
+            )
             val price = products[entry.id]?.formattedPrice
             val state = storeItemState(
                 productId = entry.id,
@@ -323,4 +338,48 @@ private fun StoreFooter(storeError: String?, onRetry: () -> Unit) {
         fontFamily = FontFamily.Monospace,
         fontSize = 11.sp,
     )
+}
+
+/**
+ * Pool membership toggle for one catalog sound. [label] carries the access state
+ * (OWNED / TRIAL mm:ss / TRY 5 MIN); tapping a locked row starts its trial.
+ */
+@Composable
+private fun PoolRow(
+    entry: SoundEntry,
+    checked: Boolean,
+    label: String?,
+    onToggle: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggle() }
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = if (checked) "[x]" else "[ ]",
+            color = P.Gold,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 13.sp,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = entry.displayName,
+            color = if (checked) P.TextMain else P.TextDim,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 13.sp,
+        )
+        if (label != null) {
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = label,
+                color = if (label == "OWNED") P.Success else P.Gold,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                letterSpacing = 1.sp,
+            )
+        }
+    }
 }
