@@ -80,9 +80,11 @@ app/                    application module
         ui/             Compose screens + 15 palettes
     src/test/java/      deterministic JVM unit tests (no Robolectric)
 docs/behavior-contract.md   product behaviour taken from the Windows original
-docs/privacy-policy.md      public privacy policy text (W9)
-docs/data-safety.md         Play Data Safety answers + permission/SDK inventory (W9)
-docs/play-fgs-declaration.md Play foreground-service declaration + demo script (W10)
+docs/release-checklist.md   one authoritative gate list: CODE/CONTENT/PHYSICAL/PLAY/POLICY/FINAL + versionCode policy
+docs/release-signing.md     release signing strategy (Play App Signing, untracked keystore.properties, no secrets in Git)
+docs/privacy-policy.md      public privacy policy text (current product state; contact email still a human blocker)
+docs/data-safety.md         Play Data Safety answers + permission/SDK inventory (refreshed for the stats store)
+docs/play-fgs-declaration.md Play foreground-service declaration + WakeLock evidence + demo script
 docs/qa-audit-w12.md        QA audit verdicts + device checklist (W12/W12.1)
 reference/windows/      original Windows source + assets (behavioural reference)
 reference/wintage/      the 16 source palette JSONs (the 15 shipped palettes plus
@@ -95,13 +97,24 @@ into `ui/theme/Palettes.kt` as literal colours and nothing reads the JSON at run
 
 ## Building
 
+Release identity: **versionName 1.0.0, versionCode 1** (`app/build.gradle.kts`).
+Once any build is uploaded to Play, every later upload needs a strictly greater
+versionCode — see `docs/release-checklist.md`.
+
 Requires JDK 17+ and an Android SDK with platform 36.
 Point `local.properties` at the SDK (`sdk.dir=...`).
 
 ```bash
 ./gradlew assembleDebug
 ./gradlew test
+./gradlew bundleRelease        # app/build/outputs/bundle/release/app-release.aab
 ```
+
+Release artifacts build **unsigned** unless an untracked `keystore.properties`
+provides the signing secrets (`docs/release-signing.md`) — an unsigned release is
+fine for local verification and never usable for a production upload. Minification
+stays off for v1.0.0; enabling R8 would be a behaviour delta to revalidate, not a
+release step.
 
 ## Wave status
 
@@ -128,6 +141,7 @@ Point `local.properties` at the SDK (`sdk.dir=...`).
 | — | localization + help + exit | done — en/ru/et/ja per-app locales, `?` Help dialog, state-aware EXIT |
 | — | statistics + 100K earned Premium + Blip Glow | done — Today/Week/Month/Total on one own DataStore (memory authoritative, one-shot load), saturating counters, threshold self-heal, atomic earned cold start, separate Glow TRY action |
 | — | release content & identity | done — Problip mark + adaptive/monochrome launcher icons, brand mark in Main, alpha-mask notification icon, 1x1-first resizable widget, duplicate Custom theme removed; final curated sounds still pending user assets |
+| — | pre-Play release engineering (T-30) | done — versionName 1.0.0, bundleRelease path verified, signing strategy + release checklist docs, privacy/Data Safety/FGS reconciliation (stats store, WakeLock evidence, T-29 kept open) |
 
 Evidence for the table above: `gradlew test assembleDebug assembleRelease lint lintVitalRelease`
 — **260 unique JVM tests, 0 failures, 31 suites**, lint clean (0 errors; remaining
@@ -145,10 +159,11 @@ Open gates that need something this repository cannot provide:
   Play Console products and an internal test track (W8 developer setup first).
 - W9 publication: a public URL for the privacy policy and a contact email.
 
-Next code wave: the release-content & identity wave is complete. What remains
-needs user-supplied final WAVs (premium sounds are still synthesized placeholders
-— `scripts/make_placeholder_sounds.py`, ledger in `reference/audio/SOURCES.md`),
-a device (physical acceptance, T-014), a Play Console seat (T-009/T-010) or a
-hosting decision (T-015).
+Next code wave: the release pipeline is prepared (T-30). What remains needs
+user-supplied final WAVs (premium sounds are still synthesized placeholders —
+`scripts/make_placeholder_sounds.py`, ledger in `reference/audio/SOURCES.md`),
+a real contact email (privacy policy blocker), signing credentials
+(`docs/release-signing.md`), a device (physical acceptance, T-014), a Play
+Console seat (T-009/T-010) or a hosting decision (T-015).
 
 Project memory (waves, tickets, evidence) lives in `.saipen/`.
