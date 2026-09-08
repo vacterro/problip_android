@@ -17,6 +17,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -314,6 +315,76 @@ class BlipStatsRepositoryTest {
         assertEquals("2026-09-07", store.state.value[stringKey("day_key")])
         assertEquals("2026-W37", store.state.value[stringKey("week_key")])
         assertEquals("2026-09", store.state.value[stringKey("month_key")])
+    }
+
+    @Test
+    fun `initial load publishes earned premium synchronously with ready`() = runTest {
+        // A persisted reward must be visible the instant start() returns — no
+        // coroutine scheduler advancement between the assertions.
+        val store = FakeDataStore()
+        store.state.value = store.state.value.toMutablePreferences().apply {
+            set(longPreferencesKey("total_count"), 100_000L)
+            set(booleanPreferencesKey("earned_premium"), true)
+        }
+        val repo = BlipStatsRepository(store, backgroundScope, utcClock(2026, 9, 7))
+        repo.start()
+        // No runCurrent / scheduler step between here and the assertions.
+        assertTrue(repo.ready.value)
+        assertTrue(repo.earnedPremium.value)
+        assertEquals(100_000L, repo.record.value.totalCount)
+    }
+
+    @Test
+    fun `crossing the reward publishes earned premium with the in-memory transition`() = runTest {
+        // 99_999 blips already lived. The 100,000th blip must publish the new
+        // entitlement in memory immediately, with no scheduler advancement.
+        val store = FakeDataStore()
+        store.state.value = store.state.value.toMutablePreferences().apply {
+            set(longPreferencesKey("total_count"), 99_999L)
+        }
+        val repo = BlipStatsRepository(store, backgroundScope, utcClock(2026, 9, 7))
+        repo.start()
+        runCurrent()
+        assertFalse(repo.earnedPremium.value)
+
+        repo.recordSuccessfulBlip()
+
+        assertEquals(100_000L, repo.record.value.totalCount)
+        assertTrue(repo.record.value.earnedPremium)
+        assertTrue(repo.earnedPremium.value)
+    }
+
+    @Test
+    fun `ready never opens before the loaded earned premium is published`() = runTest {
+        // Observe the ready transition: at the FIRST state where ready becomes
+        // true, earnedPremium must already equal the loaded record.
+        val store = FakeDataStore()
+        store.state.value = store.state.value.toMutablePreferences().apply {
+            set(longPreferencesKey("total_count"), 100_000L)
+            set(booleanPreferencesKey("earned_premium"), true)
+        }
+        val repo = BlipStatsRepository(store, backgroundScope, utcClock(2026, 9, 7))
+
+        val flips = mutableListOf<Pair<Boolean, Boolean>>()
+        val job = backgroundScope.launch {
+            var prevReady = repo.ready.value
+            flips.add(prevReady to repo.earnedPremium.value)
+            repo.ready.collect { ready ->
+                if (ready != prevReady) {
+                    flips.add(ready to repo.earnedPremium.value)
+                    prevReady = ready
+                }
+            }
+        }
+        repo.start()
+        runCurrent()
+        job.cancel()
+
+        assertTrue(flips.any { it.first })
+        // Every time ready is true, the earned entitlement is already published.
+        flips.filter { it.first }.forEach { (_, earned) ->
+            assertTrue("ready=true must imply earnedPremium already initialized", earned)
+        }
     }
 
     private fun stringKey(name: String) =

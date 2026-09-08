@@ -14,13 +14,9 @@ import java.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 private val Context.problipStatsDataStore: DataStore<Preferences> by preferencesDataStore(
@@ -82,11 +78,16 @@ class BlipStatsRepository(
      * The reward entitlement. Once true from a persisted read, it never flips
      * back: a transient read failure keeps the in-memory record instead of
      * overwriting a latched reward with an empty one.
+     *
+     * Published as an explicit [MutableStateFlow] — NOT derived from [_record]
+     * — so [start] can initialize it in the same synchronous block that sets
+     * [ready]: when the cold-start barrier opens, the entitlement value is
+     * already the persisted one, deterministically, with no derived-flow
+     * emission scheduled behind it.
      */
-    val earnedPremium: StateFlow<Boolean> = _record
-        .map { it.earnedPremium }
-        .distinctUntilChanged()
-        .stateIn(scope, SharingStarted.Eagerly, false)
+    private val _earnedPremium = MutableStateFlow(false)
+
+    val earnedPremium: StateFlow<Boolean> = _earnedPremium.asStateFlow()
 
     /**
      * False until the persisted statistics have been read once. The cold-start
@@ -112,6 +113,10 @@ class BlipStatsRepository(
             BlipStatsRecord()
         }
         _record.value = loaded
+        // Publication order is the atomicity contract: record, then earned,
+        // then ready — ready == true therefore implies the entitlement was
+        // already initialized from the persisted record.
+        _earnedPremium.value = loaded.earnedPremium
         _ready.value = true
     }
 
@@ -125,6 +130,10 @@ class BlipStatsRepository(
         val before = _record.value
         val after = BlipStatsLogic.afterBlip(before, keys)
         _record.value = after
+        // Publish the newly-earned access synchronously with the in-memory
+        // transition — never waiting on persistence. The reward is
+        // irreversible: it is only ever set true, never back to false.
+        if (after.earnedPremium) _earnedPremium.value = true
         val crossed = !before.earnedPremium && after.earnedPremium
         schedulePersist(immediate = crossed)
     }
