@@ -27,7 +27,16 @@ meditation timer. The Windows version is a behavioural reference only.
   them light (Vintage Classic).
 - **Trials**: any unowned premium sound, theme or interval preset can run a
   **five-minute trial**, reusable, per item, persisted as a wall-clock expiry.
-  No counters, cooldowns or accounts.
+  No cooldowns, no accounts, no device IDs, no server checks.
+- **Statistics & reward**: only real successful blips are counted (Today / This
+  week / This month / Total, in Settings; a `BLIPS n` line on Main, hideable).
+  At **100,000** lifetime successful blips Premium unlocks locally, permanently —
+  a separate `EARNED` access source that never mutates Play ownership and is
+  never revoked by a reset, refund or Billing refresh.
+- **Blip Glow**: a premium soft accent pulse on the Main background on every
+  successful blip (max 25% alpha). Rides the Customization Pack, its own
+  five-minute `feature_blip_glow` trial, Developer Access, or the earned reward;
+  the preference default is ON and hides nothing but the effect.
 - **Developer Access**: hidden seven-day global unlock behind a chord on the PROBLIP
   title (held 20 s, then START/STOP while still held). Labels read `DEV`, never
   `OWNED` — it expires, a purchase does not.
@@ -51,7 +60,8 @@ meditation timer. The Windows version is a behavioural reference only.
   the same override.
 
 Everything premium rides two Play products (the premium sounds and one Customization
-Pack); the access rule is one place: `free || owned || activeTrial || developerAccess`.
+Pack); the access rule is one place:
+`free || owned || activeTrial || developerAccess || earnedPremium`.
 
 ## Layout
 
@@ -111,9 +121,10 @@ Point `local.properties` at the SDK (`sdk.dir=...`).
 | — | PULSE | done — alternating 5 s / 10–20 s premium preset |
 | — | interaction polish | done — playback lamp, STARTING status, haptics, pressed/selected states |
 | — | localization + help + exit | done — en/ru/et/ja per-app locales, `?` Help dialog, state-aware EXIT |
+| — | statistics + 100K earned Premium + Blip Glow | done — Today/Week/Month/Total on one own DataStore (memory authoritative, one-shot load), saturating counters, threshold self-heal, atomic earned cold start, separate Glow TRY action |
 
 Evidence for the table above: `gradlew test assembleDebug assembleRelease lint lintVitalRelease`
-— **185 unique JVM tests, 0 failures, 25 suites**, lint clean (0 errors; remaining
+— **248 unique JVM tests, 0 failures, 30 suites**, lint clean (0 errors; remaining
 warnings reviewed — typography/dependency-age noise, the deliberate session WakeLock
 and two localization advisories), debug and release APKs built. `test` runs the
 debug and release variants of the same suite, so that number counts each test once.

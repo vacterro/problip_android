@@ -55,6 +55,7 @@
     <string name="included_label">ВКЛЮЧЕНО</string>
     <string name="trial_format">ПРОБА %1$s</string>
     <string name="try_5_min">ПРОБА 5 МИН</string>
+    <string name="earned_label">ЗАРАБОТАНО</string>
     <string name="remaining_format">осталось %1$s</string>
     <string name="developer_unlocked_title">ДОСТУП РАЗРАБОТЧИКА ОТКРЫТ</string>
     <string name="developer_unlocked_body">7 ДНЕЙ ПРЕМИУМ-ДОСТУПА</string>
@@ -63,6 +64,19 @@
     <string name="error_playback">Ошибка воспроизведения</string>
 
     <string name="settings_title">НАСТРОЙКИ</string>
+    <string name="statistics_section">СТАТИСТИКА</string>
+    <string name="stats_today">СЕГОДНЯ</string>
+    <string name="stats_week">ЭТА НЕДЕЛЯ</string>
+    <string name="stats_month">ЭТОТ МЕСЯЦ</string>
+    <string name="stats_total">ВСЕГО</string>
+    <string name="blips_format">СИГНАЛОВ %1$s</string>
+    <string name="premium_reward_progress">ПРЕМИУМ-НАГРАДА  %1$s / %2$s</string>
+    <string name="premium_reward_earned">ПРЕМИУМ-НАГРАДА  ЗАРАБОТАНО</string>
+    <string name="visual_section">ОФОРМЛЕНИЕ</string>
+    <string name="show_blip_counter">ПОКАЗЫВАТЬ СЧЁТЧИК</string>
+    <string name="blip_glow">СВЕЧЕНИЕ</string>
+    <string name="toggle_on">ВКЛ</string>
+    <string name="toggle_off">ВЫКЛ</string>
     <string name="temporary_access">ВРЕМЕННЫЙ ДОСТУП</string>
     <string name="developer_access">Доступ разработчика</string>
     <string name="reset_temporary_access">СБРОСИТЬ ВРЕМЕННЫЙ ДОСТУП</string>
@@ -130,6 +144,8 @@
     <string name="help_intervals_body">• 4-7 — случайные секунды между сигналами.\n• 5 / 10 / 15 / 20 / 30 — фиксированные интервалы.\n• ПУЛЬС — каждые 5 с, чередуясь со случайными 10-20 с.\n• РУЧНОЙ — свои секунды ОТ и ДО. (премиум)</string>
     <string name="help_premium">ПРЕМИУМ / ПРОБА</string>
     <string name="help_premium_body">• Премиум-контент можно пробовать 5 минут.\n• Пробы не продлеваются автоматически.\n• Новую пробу можно запустить вручную в любой момент.\n• Покупка бессрочна и не истекает.</string>
+    <string name="help_statistics">СТАТИСТИКА</string>
+    <string name="help_statistics_body">• Считаются только успешные сигналы.\n• В настройках: сегодня / эта неделя / этот месяц / всего.\n• 100 000 сигналов открывают премиум локально навсегда.\n• Прогресс хранится в данных приложения — у Problip нет аккаунта и сервера.</string>
     <string name="help_background">ФОН</string>
     <string name="help_background_body">• Во время воспроизведения Problip показывает постоянное уведомление.\n• Кнопка СТОП в уведомлении останавливает воспроизведение без открытия приложения.</string>
     <string name="help_tips">СОВЕТЫ</string>

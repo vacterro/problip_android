@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -30,6 +31,18 @@ class TrialCoordinator(
     private val clearTemporary: suspend () -> Unit,
     private val scope: CoroutineScope,
     private val clock: TrialClock = SystemTrialClock,
+    /** The stats-side 100K reward, combined HERE so callers read one authority. */
+    earnedPremium: StateFlow<Boolean> = MutableStateFlow(false),
+    /**
+     * The stats-side readiness signal: true once the persisted earned state has
+     * been loaded from its DataStore. The first [ready] publication waits for
+     * it, so `ready == true` guarantees the access snapshot already contains
+     * the initialized earned value — a cold start can never resolve its first
+     * plan against `earned = false` while the stats read is still in flight.
+     * The default (always ready) is for callers that construct the coordinator
+     * with an already-initialized earned flow.
+     */
+    private val earnedReady: StateFlow<Boolean> = MutableStateFlow(true),
 ) {
 
     private val _expiries = MutableStateFlow<Map<String, Long>>(emptyMap())
@@ -44,7 +57,11 @@ class TrialCoordinator(
 
     private val _access = MutableStateFlow(PremiumAccess())
 
-    /** The effective-access authority: what is temporarily granted right now. */
+    /**
+     * The effective-access authority: what is temporarily granted right now,
+     * plus the permanent earned reward. Every caller reads this one flow — no
+     * call site combines TrialCoordinator.access with the stats repository.
+     */
     val access: StateFlow<PremiumAccess> = _access.asStateFlow()
 
     /**
@@ -56,26 +73,53 @@ class TrialCoordinator(
     private val _ready = MutableStateFlow(false)
     val ready: StateFlow<Boolean> = _ready.asStateFlow()
 
+    private val _earnedPremium = MutableStateFlow(false)
+
+    init {
+        // The earned reward is an input to the SAME recompute, so a persisted
+        // reward and a restored trial can never disagree with one authority.
+        // Before the first snapshot exists, track() owns the recompute: setting
+        // ready from here would advertise a placeholder as initialized.
+        scope.launch {
+            earnedPremium.collect { earned ->
+                _earnedPremium.value = earned
+                if (_ready.value) recompute()
+            }
+        }
+    }
+
     fun start() {
         scope.launch {
             persisted.distinctUntilChanged().collectLatest { track(it) }
         }
     }
 
+    /** Recomputes access from the current snapshots, then reschedules nothing. */
+    private fun recompute() {
+        val now = clock.nowMillis()
+        val temporary = TemporaryAccess(_expiries.value, _developerExpiryMillis.value)
+        _access.value = PremiumAccess(
+            activeTrials = TrialAccess.activeIds(temporary.trialExpiries, now),
+            developerAccess = PremiumAccess.developerActive(
+                temporary.developerExpiryMillis,
+                now,
+            ),
+            earnedPremium = _earnedPremium.value,
+        )
+        _ready.value = true
+    }
+
     /** Recomputes access, then sleeps exactly until the next expiration is due. */
     private suspend fun track(temporary: TemporaryAccess) {
+        // Atomic cold start: the FIRST ready must already contain the initialized
+        // earned value, so temporary access never outruns the stats read. The
+        // earned collector recomputes immediately once the reward arrives later.
+        earnedReady.first { it }
         while (true) {
             val now = clock.nowMillis()
             _expiries.value = TrialAccess.sanitize(temporary.trialExpiries)
             _developerExpiryMillis.value = temporary.developerExpiryMillis
-            _access.value = PremiumAccess(
-                activeTrials = TrialAccess.activeIds(temporary.trialExpiries, now),
-                developerAccess = PremiumAccess.developerActive(
-                    temporary.developerExpiryMillis,
-                    now,
-                ),
-            )
-            _ready.value = true
+            recompute()
             val next = nextExpiryMillis(temporary, now) ?: return
             delay(next - now)
         }

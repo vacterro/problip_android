@@ -162,4 +162,108 @@ class TrialCoordinatorTest {
         assertEquals(setOf(glass), trials.access.value.activeTrials)
         assertTrue(trials.access.value.developerAccess)
     }
+
+    @Test
+    fun persistedEarnedPremiumIsPartOfTheSingleEffectiveAccessAuthority() = runTest {
+        val f = fixture()
+        val earned = MutableStateFlow(false)
+        val trials = TrialCoordinator(
+            persisted = f.store,
+            update = { transform ->
+                f.store.value = f.store.value.copy(trialExpiries = transform(f.store.value.trialExpiries))
+            },
+            setDeveloperExpiry = { expiry -> f.store.value = f.store.value.copy(developerExpiryMillis = expiry) },
+            clearTemporary = { f.store.value = TemporaryAccess() },
+            scope = backgroundScope,
+            clock = { f.now },
+            earnedPremium = earned,
+        )
+        trials.start()
+        runCurrent()
+        assertFalse(trials.access.value.earnedPremium)
+
+        // Stats DataStore answers after temporary access initialized.
+        earned.value = true
+        runCurrent()
+        assertTrue(trials.access.value.earnedPremium)
+        assertTrue(trials.access.value.grantsBlipGlow(ownsCustomizationPack = false))
+        assertEquals(TrialAccess.ALL_IDS, trials.access.value.grantedIds)
+
+        // Resetting temporary access cannot revoke the earned source.
+        trials.resetTemporaryAccess()
+        runCurrent()
+        assertTrue(trials.access.value.earnedPremium)
+        assertTrue(trials.access.value.grants(glass))
+    }
+
+    @Test
+    fun accessReadyNeverPrecedesEarnedReadinessOnAColdStart() = runTest {
+        // THE atomic cold-start race: temporary access resolves FIRST, the stats
+        // store is still loading (earnedReady=false). The old shape published
+        // ready=true from the temporary snapshot alone, so a cold start could
+        // resolve its first plan with earned=false before the persisted reward
+        // arrived. ready must stay false until BOTH are initialized.
+        val f = fixture()
+        val earned = MutableStateFlow(false)
+        val earnedReady = MutableStateFlow(false)
+        val trials = TrialCoordinator(
+            persisted = f.store,
+            update = { transform ->
+                f.store.value = f.store.value.copy(trialExpiries = transform(f.store.value.trialExpiries))
+            },
+            setDeveloperExpiry = { expiry -> f.store.value = f.store.value.copy(developerExpiryMillis = expiry) },
+            clearTemporary = { f.store.value = TemporaryAccess() },
+            scope = backgroundScope,
+            clock = { f.now },
+            earnedPremium = earned,
+            earnedReady = earnedReady,
+        )
+        trials.start()
+        runCurrent()
+
+        // Temporary access snapshot arrives (restored trials, Developer Access).
+        // earnedReady is still false: the coordinator must NOT advertise ready.
+        assertFalse(trials.ready.value)
+        assertFalse(trials.access.value.earnedPremium)
+
+        // The stats read completes and the persisted earned value lands.
+        earnedReady.value = true
+        earned.value = true
+        runCurrent()
+
+        // NOW both sources are initialized — and the same recompute already
+        // carries the earned reward, so the first plan reads earned=true.
+        assertTrue(trials.ready.value)
+        assertTrue(trials.access.value.earnedPremium)
+        assertTrue(trials.access.value.grants(glass, owned = false))
+    }
+
+    @Test
+    fun earnedOnlyReadinessStillPublishesReady() = runTest {
+        // No temporary access at all: the persisted earned state is the ONLY
+        // input, and ready must publish as soon as the stats read completes.
+        val f = fixture()
+        val earned = MutableStateFlow(true)
+        val earnedReady = MutableStateFlow(false)
+        val trials = TrialCoordinator(
+            persisted = f.store,
+            update = { transform ->
+                f.store.value = f.store.value.copy(trialExpiries = transform(f.store.value.trialExpiries))
+            },
+            setDeveloperExpiry = { expiry -> f.store.value = f.store.value.copy(developerExpiryMillis = expiry) },
+            clearTemporary = { f.store.value = TemporaryAccess() },
+            scope = backgroundScope,
+            clock = { f.now },
+            earnedPremium = earned,
+            earnedReady = earnedReady,
+        )
+        trials.start()
+        runCurrent()
+        assertFalse("earned state not yet initialized", trials.ready.value)
+
+        earnedReady.value = true
+        runCurrent()
+        assertTrue(trials.ready.value)
+        assertTrue(trials.access.value.earnedPremium)
+    }
 }

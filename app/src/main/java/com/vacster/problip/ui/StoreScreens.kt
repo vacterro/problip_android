@@ -82,6 +82,7 @@ fun SoundsScreen(
                             accessLabel(
                                 free = entry.free,
                                 owned = entry.id in owned,
+                                earnedPremium = access.earnedPremium,
                                 developerAccess = access.developerAccess,
                                 expiryMillis = trialExpiries[entry.id],
                                 nowMillis = now,
@@ -169,6 +170,7 @@ fun ThemesScreen(
                         accessLabel(
                             free = entry.free,
                             owned = ownsPack,
+                            earnedPremium = access.earnedPremium,
                             developerAccess = access.developerAccess,
                             expiryMillis = trialExpiries[entry.id],
                             nowMillis = now,

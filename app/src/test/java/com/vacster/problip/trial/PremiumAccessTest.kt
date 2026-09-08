@@ -134,4 +134,63 @@ class PremiumAccessTest {
         assertEquals("4m", PremiumAccess.formatDeveloperRemaining(now + 240_000L, now))
         assertEquals("0m", PremiumAccess.formatDeveloperRemaining(now - 1L, now))
     }
+
+    @Test
+    fun earnedPremiumGrantsEveryPremiumSoundThemeAndFeature() {
+        val access = PremiumAccess(earnedPremium = true)
+        assertTrue(access.grants(glass))
+        assertTrue(access.grants(dracula))
+        assertTrue(access.grantsManualInterval(ownsCustomizationPack = false))
+        assertTrue(access.grantsPulseInterval(ownsCustomizationPack = false))
+        assertTrue(access.grantsBlipGlow(ownsCustomizationPack = false))
+        assertEquals(TrialAccess.ALL_IDS, access.grantedIds)
+    }
+
+    @Test
+    fun earnedPremiumOutlivesDeveloperAccessExpiryAndTrials() {
+        // Developer Access gone, every trial gone: the earned reward stands alone.
+        val access = PremiumAccess(earnedPremium = true)
+        assertTrue(access.grants(glass))
+        assertTrue(access.grants(dracula))
+        assertTrue(access.grantsManualInterval(ownsCustomizationPack = false))
+        assertTrue(access.grantsPulseInterval(ownsCustomizationPack = false))
+        assertTrue(access.grantsBlipGlow(ownsCustomizationPack = false))
+    }
+
+    @Test
+    fun earnedPremiumNeverClaimsPlayOwnership() {
+        // The reward is its own access source; it must never look like a purchase.
+        val access = PremiumAccess(earnedPremium = true)
+        // grants() with owned=false still grants, but nothing in PremiumAccess
+        // writes to BillingRepository — ownership lives in another package's
+        // test (EntitlementsTest) and this type has no owned-products field.
+        assertTrue(access.grants(glass, free = false, owned = false))
+    }
+
+    @Test
+    fun blipGlowRidesThePackPurchaseItsOwnTrialDevAccessOrTheEarnedReward() {
+        assertTrue(PremiumAccess().grantsBlipGlow(ownsCustomizationPack = true))
+        assertTrue(
+            PremiumAccess(activeTrials = setOf(TrialAccess.FEATURE_BLIP_GLOW))
+                .grantsBlipGlow(ownsCustomizationPack = false),
+        )
+        assertTrue(
+            PremiumAccess(developerAccess = true).grantsBlipGlow(ownsCustomizationPack = false),
+        )
+        assertTrue(
+            PremiumAccess(earnedPremium = true).grantsBlipGlow(ownsCustomizationPack = false),
+        )
+        assertFalse(
+            PremiumAccess(activeTrials = setOf(glass)).grantsBlipGlow(ownsCustomizationPack = false),
+        )
+        assertFalse(PremiumAccess().grantsBlipGlow(ownsCustomizationPack = false))
+    }
+
+    @Test
+    fun aGlowTrialDoesNotUnlockManualOrPulse() {
+        val glowOnly = PremiumAccess(activeTrials = setOf(TrialAccess.FEATURE_BLIP_GLOW))
+        assertTrue(glowOnly.grantsBlipGlow(ownsCustomizationPack = false))
+        assertFalse(glowOnly.grantsManualInterval(ownsCustomizationPack = false))
+        assertFalse(glowOnly.grantsPulseInterval(ownsCustomizationPack = false))
+    }
 }

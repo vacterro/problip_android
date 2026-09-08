@@ -5,6 +5,7 @@ import android.content.Context
 import com.vacster.problip.billing.BillingRepository
 import com.vacster.problip.service.ProblipSession
 import com.vacster.problip.settings.SettingsRepository
+import com.vacster.problip.stats.BlipStatsRepository
 import com.vacster.problip.trial.TemporaryAccess
 import com.vacster.problip.trial.TrialCoordinator
 import com.vacster.problip.widget.ProblipWidgetUpdater
@@ -15,7 +16,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
-/** App-level singletons: one BillingClient and one trial coordinator per process. */
+/** App-level singletons: one BillingClient, one trial coordinator and one stats repository per process. */
 class ProblipApp : Application() {
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -26,6 +27,9 @@ class ProblipApp : Application() {
     lateinit var trials: TrialCoordinator
         private set
 
+    lateinit var stats: BlipStatsRepository
+        private set
+
     override fun onCreate() {
         super.onCreate()
         val settings = SettingsRepository.fromContext(this)
@@ -34,6 +38,7 @@ class ProblipApp : Application() {
             scope = appScope,
             cacheOwned = { owned -> settings.setOwnedProducts(owned) },
         )
+        stats = BlipStatsRepository.fromContext(this, appScope)
         trials = TrialCoordinator(
             persisted = settings.settings.map {
                 TemporaryAccess(it.trialExpiries, it.developerAccessExpiryMillis)
@@ -42,8 +47,11 @@ class ProblipApp : Application() {
             setDeveloperExpiry = settings::setDeveloperAccessExpiry,
             clearTemporary = settings::clearTemporaryAccess,
             scope = appScope,
+            earnedPremium = stats.earnedPremium,
+            earnedReady = stats.ready,
         )
         trials.start()
+        appScope.launch { stats.start() }
         appScope.launch {
             // Seed the offline cache, then let Play answer with the truth.
             billing.seedCached(settings.settings.first().ownedProducts)
@@ -63,5 +71,8 @@ class ProblipApp : Application() {
 
         fun trials(context: Context): TrialCoordinator =
             (context.applicationContext as ProblipApp).trials
+
+        fun stats(context: Context): BlipStatsRepository =
+            (context.applicationContext as ProblipApp).stats
     }
 }

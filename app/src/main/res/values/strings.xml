@@ -56,6 +56,7 @@
     <string name="included_label">INCLUDED</string>
     <string name="trial_format">TRIAL %1$s</string>
     <string name="try_5_min">TRY 5 MIN</string>
+    <string name="earned_label">EARNED</string>
     <string name="remaining_format">%1$s remaining</string>
     <string name="developer_unlocked_title">DEVELOPER ACCESS UNLOCKED</string>
     <string name="developer_unlocked_body">7 DAYS OF PREMIUM ACCESS</string>
@@ -66,6 +67,19 @@
 
     <!-- Settings -->
     <string name="settings_title">SETTINGS</string>
+    <string name="statistics_section">STATISTICS</string>
+    <string name="stats_today">TODAY</string>
+    <string name="stats_week">THIS WEEK</string>
+    <string name="stats_month">THIS MONTH</string>
+    <string name="stats_total">TOTAL</string>
+    <string name="blips_format">BLIPS %1$s</string>
+    <string name="premium_reward_progress">PREMIUM REWARD  %1$s / %2$s</string>
+    <string name="premium_reward_earned">PREMIUM REWARD  EARNED</string>
+    <string name="visual_section">VISUAL</string>
+    <string name="show_blip_counter">SHOW BLIP COUNTER</string>
+    <string name="blip_glow">BLIP GLOW</string>
+    <string name="toggle_on">ON</string>
+    <string name="toggle_off">OFF</string>
     <string name="temporary_access">TEMPORARY ACCESS</string>
     <string name="developer_access">Developer Access</string>
     <string name="reset_temporary_access">RESET TEMPORARY ACCESS</string>
@@ -139,6 +153,8 @@
     <string name="help_intervals_body">• 4-7 — random seconds between blips.\n• 5 / 10 / 15 / 20 / 30 — fixed presets.\n• PULSE — every 5 sec, alternating with a random 10-20 sec.\n• MANUAL — your own FROM and TO seconds. (premium)</string>
     <string name="help_premium">PREMIUM / TRIAL</string>
     <string name="help_premium_body">• Premium content can be tried for 5 minutes.\n• Trials do not renew automatically.\n• A new trial can be started manually at any time.\n• A purchase is permanent and never expires.</string>
+    <string name="help_statistics">STATISTICS</string>
+    <string name="help_statistics_body">• Only successful blips are counted.\n• Settings shows Today / This week / This month / Total.\n• 100,000 total blips unlock Premium locally, forever.\n• Progress is local app data — Problip has no account and no server.</string>
     <string name="help_background">BACKGROUND</string>
     <string name="help_background_body">• While playing, Problip shows a permanent notification.\n• The notification STOP button stops playback without reopening the app.</string>
     <string name="help_tips">TIPS</string>

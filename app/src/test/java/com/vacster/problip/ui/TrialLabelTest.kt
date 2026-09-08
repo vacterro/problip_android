@@ -128,4 +128,70 @@ class TrialLabelTest {
             )?.kind,
         )
     }
+
+    @Test
+    fun earnedPremiumReadsEarnedAndNeverOwned() {
+        assertEquals(
+            AccessLabelKind.EARNED,
+            accessLabel(
+                free = false,
+                owned = false,
+                earnedPremium = true,
+                expiryMillis = null,
+                nowMillis = now,
+            )?.kind,
+        )
+        // Even with a running trial and DEV stacked behind it.
+        assertEquals(
+            AccessLabelKind.EARNED,
+            accessLabel(
+                free = false,
+                owned = false,
+                earnedPremium = true,
+                developerAccess = true,
+                expiryMillis = now + TrialAccess.DURATION_MS,
+                nowMillis = now,
+            )?.kind,
+        )
+    }
+
+    @Test
+    fun realOwnershipOutranksTheEarnedRewardOnGenuinelyOwnedContent() {
+        assertEquals(
+            AccessLabelKind.OWNED,
+            accessLabel(
+                free = false,
+                owned = true,
+                earnedPremium = true,
+                expiryMillis = null,
+                nowMillis = now,
+            )?.kind,
+        )
+    }
+
+    @Test
+    fun earnedOutranksDevWhichOutranksTrialOnNonOwnedContent() {
+        val expiry = now + TrialAccess.DURATION_MS
+        assertEquals(
+            AccessLabelKind.EARNED,
+            accessLabel(
+                free = false,
+                owned = false,
+                earnedPremium = true,
+                developerAccess = true,
+                expiryMillis = expiry,
+                nowMillis = now,
+            )?.kind,
+        )
+        assertEquals(
+            AccessLabelKind.DEV,
+            accessLabel(
+                free = false,
+                owned = false,
+                developerAccess = true,
+                expiryMillis = expiry,
+                nowMillis = now,
+            )?.kind,
+        )
+    }
 }

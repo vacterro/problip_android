@@ -22,11 +22,13 @@ object TrialAccess {
     /** Premium features have no catalog entry, so they carry their own stable ids. */
     const val FEATURE_MANUAL_INTERVAL = "feature_manual_interval"
     const val FEATURE_PULSE_INTERVAL = "feature_pulse_interval"
+    const val FEATURE_BLIP_GLOW = "feature_blip_glow"
 
     /** Trialable ids are exactly the premium catalog entries; free content needs no trial. */
     val SOUND_IDS: Set<String> = SoundCatalog.all.filterNot { it.free }.map { it.id }.toSet()
     val THEME_IDS: Set<String> = ThemeCatalog.all.filterNot { it.free }.map { it.id }.toSet()
-    val FEATURE_IDS: Set<String> = setOf(FEATURE_MANUAL_INTERVAL, FEATURE_PULSE_INTERVAL)
+    val FEATURE_IDS: Set<String> =
+        setOf(FEATURE_MANUAL_INTERVAL, FEATURE_PULSE_INTERVAL, FEATURE_BLIP_GLOW)
     val ALL_IDS: Set<String> = SOUND_IDS + THEME_IDS + FEATURE_IDS
 
     fun isTrialable(contentId: String): Boolean = contentId in ALL_IDS

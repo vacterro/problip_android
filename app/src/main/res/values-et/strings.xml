@@ -51,6 +51,7 @@
     <string name="included_label">KAASAS</string>
     <string name="trial_format">PROOV %1$s</string>
     <string name="try_5_min">PROOVI 5 MIN</string>
+    <string name="earned_label">VÕIDETUD</string>
     <string name="remaining_format">veel %1$s</string>
     <string name="developer_unlocked_title">ARENDAJA LIGIPÄÄS AVATUD</string>
     <string name="developer_unlocked_body">7 PÄEVA PREMIUM-LIGIPÄÄSU</string>
@@ -59,6 +60,19 @@
     <string name="error_playback">Taasesitus ebaõnnestus</string>
 
     <string name="settings_title">SEADED</string>
+    <string name="statistics_section">STATISTIKA</string>
+    <string name="stats_today">TÄNA</string>
+    <string name="stats_week">SEL NÄDALAL</string>
+    <string name="stats_month">SEL KUUL</string>
+    <string name="stats_total">KOKKU</string>
+    <string name="blips_format">BLIIBE %1$s</string>
+    <string name="premium_reward_progress">PREMIUMI-AUHIND  %1$s / %2$s</string>
+    <string name="premium_reward_earned">PREMIUMI-AUHIND  VÕIDETUD</string>
+    <string name="visual_section">VÄLIMUS</string>
+    <string name="show_blip_counter">NÄITA LOENDURIT</string>
+    <string name="blip_glow">BLIIBI HELGIS</string>
+    <string name="toggle_on">SEES</string>
+    <string name="toggle_off">VÄLJAS</string>
     <string name="temporary_access">AJUTINE LIGIPÄÄS</string>
     <string name="developer_access">Arendaja ligipääs</string>
     <string name="reset_temporary_access">TÜHISTA AJUTINE LIGIPÄÄS</string>
@@ -125,6 +139,8 @@
     <string name="help_intervals_body">• 4-7 — juhuslikud sekundid helide vahel.\n• 5 / 10 / 15 / 20 / 30 — fikseeritud intervallid.\n• PULSS — iga 5 s, vaheldumisi juhuslike 10-20 s.\n• KÄSITSI — oma ALATES ja KUNI sekundid. (premium)</string>
     <string name="help_premium">PREMIUM / PROOV</string>
     <string name="help_premium_body">• Premiumi sisu saab proovida 5 minutit.\n• Proovid ei uuene automaatselt.\n• Uue proovi saab käsitsi alustada igal ajal.\n• Ost on jäädav ja ei aegu.</string>
+    <string name="help_statistics">STATISTIKA</string>
+    <string name="help_statistics_body">• Loendatakse ainult õnnestunud bliibid.\n• Seadetes: täna / sel nädalal / sel kuul / kokku.\n• 100 000 bliibi avab premiumi lokaalselt igaveseks.\n• Edening on rakenduse enda andmes — Problipil ei ole kontot ega serverit.</string>
     <string name="help_background">TAUST</string>
     <string name="help_background_body">• Taasesituse ajal näitab Problip püsivat märguannet.\n• Märguanne STOP nupp peatab taasesituse ilma rakendust avamata.</string>
     <string name="help_tips">NÄPUNÄIDED</string>

@@ -109,9 +109,16 @@ class ProblipService : Service() {
 
         val settings = settingsState ?: return
         val audio = SoundPoolAudioPlayer(this)
+        val stats = ProblipApp.stats(this@ProblipService)
         val scheduler = BlipScheduler(
             scope,
-            BlipPlayer { audio.play().also(ProblipSession::reportPlayback) },
+            BlipPlayer {
+                // The ONE successful-playback boundary, in BlipPlaybackHook:
+                // a real audio.play() counts a blip and reports the existing
+                // lamp signal. Nothing else — attempts, START, glow, widget,
+                // notification — counts.
+                BlipPlaybackHook.onPlaybackResult(audio.play(), stats.asBlipCounter())
+            },
             delayBoundary = timingBoundary(),
         )
         this.audio = audio
@@ -146,14 +153,16 @@ class ProblipService : Service() {
         sessionJobs += scope.launch {
             // Cold-start barrier: real persisted settings AND initialized access
             // snapshots (ownership cache or Play answer, plus restored trials and
-            // Developer Access) before the FIRST start(), so a premium sound or a
-            // persisted MANUAL/PULSE pick is honoured by the very first blip.
+            // Developer Access) AND the statistics/earned-entitlement read, before
+            // the FIRST start(), so a premium sound, a persisted MANUAL/PULSE pick
+            // or an already-earned 100K Premium is honoured by the very first blip.
             val plan = ColdStart.awaitFirstPlan(
                 settings = settings,
                 ownershipReady = ProblipApp.billing(this@ProblipService).ownershipReady,
                 ownedNow = { ProblipApp.billing(this@ProblipService).owned.value },
                 accessReady = ProblipApp.trials(this@ProblipService).ready,
                 accessNow = { ProblipApp.trials(this@ProblipService).access.value },
+                statsReady = ProblipApp.stats(this@ProblipService).ready,
             )
             if (!audio.prepare(plan.pool)) {
                 failSession(token, localizedString(R.string.error_sound_load))
@@ -178,6 +187,7 @@ class ProblipService : Service() {
     private fun stopSession() = onMain {
         lifecycle.stop()
         applyWakeLock()
+        flushStats()
         releaseSession()
     }
 
@@ -189,7 +199,21 @@ class ProblipService : Service() {
     private fun failSession(token: Int, message: String) = onMain {
         if (lifecycle.fail(token, message)) {
             applyWakeLock()
+            flushStats()
             releaseSession()
+        }
+    }
+
+    /**
+     * Normal teardown flushes pending counts to disk so the last blips of a
+     * session usually survive. Best-effort: audio and lifecycle state stay
+     * untouched by anything the stats store does.
+     */
+    private fun flushStats() {
+        try {
+            ProblipApp.stats(this).flush()
+        } catch (_: RuntimeException) {
+            // Stats are secondary.
         }
     }
 
@@ -291,6 +315,7 @@ class ProblipService : Service() {
         scheduler = null
         audio?.release()
         audio = null
+        flushStats()
         scope.cancel()
         lifecycle.destroy()
         applyWakeLock()

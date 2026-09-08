@@ -202,7 +202,11 @@ class TrialAccessTest {
         assertEquals(ThemeCatalog.all.filterNot { it.free }.map { it.id }.toSet(), TrialAccess.THEME_IDS)
         // Features have no catalog entry, so they are counted separately.
         assertEquals(
-            setOf(TrialAccess.FEATURE_MANUAL_INTERVAL, TrialAccess.FEATURE_PULSE_INTERVAL),
+            setOf(
+                TrialAccess.FEATURE_MANUAL_INTERVAL,
+                TrialAccess.FEATURE_PULSE_INTERVAL,
+                TrialAccess.FEATURE_BLIP_GLOW,
+            ),
             TrialAccess.FEATURE_IDS,
         )
         assertTrue(

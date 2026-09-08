@@ -203,6 +203,7 @@ fun ProblipScreen(
     val owned by viewModel.owned.collectAsState()
     val access by viewModel.access.collectAsState()
     val trialExpiries by viewModel.trialExpiries.collectAsState()
+    val statsRecord by viewModel.statsRecord.collectAsState()
 
     val running = state == ProblipState.STARTING || state == ProblipState.RUNNING
     // Summarize the EFFECTIVE pool, including the Original-Blip fallback after
@@ -233,7 +234,13 @@ fun ProblipScreen(
     val themesA11y = stringResource(R.string.themes_label)
     val settingsA11y = stringResource(R.string.settings_label)
 
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(P.Bg)) {
+    // The premium glow: the same successful-blip signal the lamp uses, gated by
+    // the preference and the access check. Runs only while Main is composed and
+    // never replays on return — the shared flow has no replay cache.
+    val glowAccessible = access.grantsBlipGlow(viewModel.ownsThemePack())
+    val glowActive = settings.blipGlowEnabled && glowAccessible
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(P.Bg).blipGlow(glowActive)) {
         val compact = maxHeight < 560.dp || LocalDensity.current.fontScale > 1.15f
         val narrowLandscape = maxWidth in 420.dp..<520.dp && maxWidth > maxHeight
         val sideBySide = (maxWidth >= 520.dp || narrowLandscape) && maxHeight < 420.dp
@@ -291,9 +298,33 @@ fun ProblipScreen(
                             maxLines = 1,
                         )
                     }
+                    if (access.earnedPremium) {
+                        Text(
+                            text = stringResource(R.string.earned_label),
+                            color = P.Gold,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 10.sp,
+                            lineHeight = 12.sp,
+                            maxLines = 1,
+                        )
+                    }
                     StatusText(state)
                     HelpButton(onClick = { helpOpen = true })
                 }
+            }
+
+            // One compact counter line under the header; hidden by the user
+            // preference, never a second screen, never a scroll. Recording and
+            // the 100K reward run whether or not this is visible.
+            if (settings.showBlipCounter) {
+                Text(
+                    text = stringResource(R.string.blips_format, formatBlipCount(statsRecord.totalCount)),
+                    color = P.TextDim,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
+                    maxLines = 1,
+                )
             }
 
             // This weighted body is measured AFTER the header and action area. Long
@@ -358,6 +389,7 @@ fun ProblipScreen(
                                 IntervalTrialLabel(
                                     featureId = featureId,
                                     owned = viewModel.ownsThemePack(),
+                                    earnedPremium = access.earnedPremium,
                                     developerAccess = access.developerAccess,
                                     trialExpiries = trialExpiries,
                                     nowMillis = now,
@@ -434,6 +466,7 @@ fun ProblipScreen(
                                 accessLabel(
                                     free = premiumSounds.isEmpty(),
                                     owned = premiumSounds.all { it.id in owned },
+                                    earnedPremium = access.earnedPremium,
                                     developerAccess = access.developerAccess,
                                     expiryMillis = firstExpiry,
                                     nowMillis = now,
@@ -604,8 +637,8 @@ private fun HelpButton(onClick: () -> Unit) {
 
 /**
  * Access label beside the interval heading: "TRIAL 04:37" while its five minutes run, "TRY 5 MIN"
- * when a tap would start them, "OWNED" once the Customization Pack is bought, "DEV" while Developer
- * Access grants it.
+ * when a tap would start them, "OWNED" once the Customization Pack is bought, "EARNED" while the
+ * 100K reward grants it, "DEV" while Developer Access grants it.
  *
  * [owned] and [developerAccess] stay separate: neither has a timer, so neither may advertise a
  * trial, but only a purchase may claim ownership.
@@ -614,6 +647,7 @@ private fun HelpButton(onClick: () -> Unit) {
 private fun IntervalTrialLabel(
     featureId: String,
     owned: Boolean,
+    earnedPremium: Boolean,
     developerAccess: Boolean,
     trialExpiries: Map<String, Long>,
     nowMillis: Long,
@@ -622,6 +656,7 @@ private fun IntervalTrialLabel(
         accessLabel(
             free = false,
             owned = owned,
+            earnedPremium = earnedPremium,
             developerAccess = developerAccess,
             expiryMillis = trialExpiries[featureId],
             nowMillis = nowMillis,

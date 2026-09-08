@@ -14,6 +14,10 @@ import com.vacster.problip.core.ProblipState
 import com.vacster.problip.service.ProblipService
 import com.vacster.problip.service.ProblipSession
 import com.vacster.problip.settings.SettingsRepository
+import com.vacster.problip.stats.BlipStats
+import com.vacster.problip.stats.BlipStatsRecord
+import com.vacster.problip.stats.BlipStatsRepository
+import com.vacster.problip.stats.PREMIUM_REWARD_BLIPS
 import com.vacster.problip.theme.ThemeCatalog
 import com.vacster.problip.trial.PremiumAccess
 import com.vacster.problip.trial.TrialAccess
@@ -33,6 +37,17 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
     private val settingsRepo = SettingsRepository.fromContext(app)
     private val billing: BillingRepository = ProblipApp.billing(app)
     private val trials: TrialCoordinator = ProblipApp.trials(app)
+    private val stats: BlipStatsRepository = ProblipApp.stats(app)
+
+    /** Lifetime blip statistics and the 100K Premium reward backed by them. */
+    val statsRecord: StateFlow<BlipStatsRecord> = stats.record
+
+    /**
+     * The display snapshot for the CURRENT periods, recomputed on each record
+     * emission. Stale buckets (yesterday, last week/month) read zero here.
+     */
+    fun currentStats(): BlipStats = stats.snapshot()
+    val premiumRewardBlips: Long get() = PREMIUM_REWARD_BLIPS
 
     val state: StateFlow<ProblipState> = ProblipSession.state
     val error: StateFlow<String?> = ProblipSession.error
@@ -68,6 +83,24 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
         started = SharingStarted.Eagerly,
         initialValue = SettingsRepository.Settings(),
     )
+
+    fun setShowBlipCounter(show: Boolean) {
+        viewModelScope.launch { settingsRepo.setShowBlipCounter(show) }
+    }
+
+    fun setBlipGlowEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepo.setBlipGlowEnabled(enabled) }
+    }
+
+    /** Starts (or declines to extend) the five-minute BLIP GLOW trial. */
+    fun tryBlipGlow() {
+        viewModelScope.launch {
+            trials.startTrial(
+                contentId = TrialAccess.FEATURE_BLIP_GLOW,
+                owned = ownsThemePack() || access.value.developerAccess || access.value.earnedPremium,
+            )
+        }
+    }
 
     fun start() = ProblipService.start(getApplication())
 
@@ -161,8 +194,11 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
     fun trySound(soundId: String) {
         SoundCatalog.byId(soundId) ?: return
         viewModelScope.launch {
-            // Developer Access already grants it, so no timer is worth starting.
-            val granted = soundId in billing.owned.value || access.value.developerAccess
+            // An existing grant (Developer Access or the earned reward) means no
+            // timer is worth starting.
+            val granted = soundId in billing.owned.value ||
+                access.value.developerAccess ||
+                access.value.earnedPremium
             trials.startTrial(soundId, owned = granted)
             settingsRepo.setSelectedSounds(settings.value.selectedSounds + soundId)
         }
@@ -176,7 +212,9 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun setTheme(themeId: String) {
         val entry = ThemeCatalog.byId(themeId) ?: return
-        val granted = ownsThemePack() || access.value.developerAccess
+        val granted = ownsThemePack() ||
+            access.value.developerAccess ||
+            access.value.earnedPremium
         viewModelScope.launch {
             if (!entry.free && !granted) trials.startTrial(entry.id, owned = false)
             settingsRepo.setTheme(entry.id)

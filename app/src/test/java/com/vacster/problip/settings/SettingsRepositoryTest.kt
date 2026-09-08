@@ -179,4 +179,31 @@ class SettingsRepositoryTest {
         assertEquals(1, clamped.manualFromSeconds)
         assertEquals(3600, clamped.manualToSeconds)
     }
+
+    @Test
+    fun counterAndGlowPreferencesDefaultOnAndPersist() = runBlocking {
+        val (repo, _) = newRepo()
+        // Defaults: both ON.
+        val defaults = repo.settings.first()
+        assertEquals(true, defaults.showBlipCounter)
+        assertEquals(true, defaults.blipGlowEnabled)
+
+        // One write per DataStore instance on the Windows host JVM (see class
+        // note), so each OFF choice gets its own store and re-read.
+        val (offCounter, _) = newRepo()
+        offCounter.setShowBlipCounter(false)
+        assertEquals(false, offCounter.settings.first().showBlipCounter)
+
+        val (offGlow, _) = newRepo()
+        offGlow.setBlipGlowEnabled(false)
+        assertEquals(false, offGlow.settings.first().blipGlowEnabled)
+    }
+
+    @Test
+    fun aMissingGlowPreferenceStillMeansOn() = runBlocking {
+        val (repo, _) = newRepo()
+        // No BLIP GLOW key ever written: reads ON.
+        assertEquals(true, repo.settings.first().blipGlowEnabled)
+        assertEquals(true, repo.settings.first().showBlipCounter)
+    }
 }

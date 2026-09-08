@@ -7,6 +7,7 @@ import com.vacster.problip.core.PremiumInterval
 import com.vacster.problip.settings.SettingsRepository
 import com.vacster.problip.trial.PremiumAccess
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
@@ -14,14 +15,17 @@ import kotlinx.coroutines.withTimeoutOrNull
 /**
  * What the very first blip of a cold process must play, and how fast.
  *
- * A cold start has three asynchronous sources and the scheduler may not start
- * before all three are real:
+ * A cold start has four asynchronous sources and the scheduler may not start
+ * before all four are real:
  *
  *  1. persisted Settings (DataStore) — the pool, the interval, the volume;
  *  2. the ownership snapshot — Play's answer, or the persisted cache standing in
  *     for it until Play answers;
  *  3. temporary access — five-minute trials and Developer Access restored from
- *     their persisted timestamps.
+ *     their persisted timestamps;
+ *  4. the statistics/earned-entitlement read — a persisted 100K Premium reward
+ *     must reach the access authority before the first plan, or the first
+ *     session of a process would briefly fall back to free content.
  *
  * Reading `owned.value` the moment Settings arrived was a race: the cache seed
  * runs in its own coroutine, so a premium sound could fall back to Original and
@@ -46,7 +50,8 @@ internal object ColdStart {
     )
 
     /**
-     * Suspends until the persisted Settings exist and both access snapshots are
+     * Suspends until the persisted Settings exist and every access snapshot —
+     * ownership, temporary access, statistics/earned entitlement — is
      * initialized, then resolves the first pool and interval from them.
      *
      * The snapshots are passed as a ready-flag plus a getter on purpose: the flag
@@ -60,12 +65,14 @@ internal object ColdStart {
         ownedNow: () -> Set<String>,
         accessReady: Flow<Boolean>,
         accessNow: () -> PremiumAccess,
+        statsReady: Flow<Boolean> = MutableStateFlow(true),
         readyTimeoutMs: Long = READY_TIMEOUT_MS,
     ): Plan {
         val persisted = settings.filterNotNull().first()
         withTimeoutOrNull(readyTimeoutMs) {
             ownershipReady.first { it }
             accessReady.first { it }
+            statsReady.first { it }
         }
         return plan(persisted, ownedNow(), accessNow())
     }

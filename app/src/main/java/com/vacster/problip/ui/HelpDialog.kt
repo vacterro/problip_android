@@ -62,6 +62,9 @@ internal fun HelpDialog(onDismiss: () -> Unit) {
             HelpHeading(stringResource(R.string.help_premium))
             HelpBody(stringResource(R.string.help_premium_body))
 
+            HelpHeading(stringResource(R.string.help_statistics))
+            HelpBody(stringResource(R.string.help_statistics_body))
+
             HelpHeading(stringResource(R.string.help_background))
             HelpBody(stringResource(R.string.help_background_body))
 

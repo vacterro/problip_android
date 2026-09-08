@@ -3,6 +3,7 @@ package com.vacster.problip.settings
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -43,6 +44,16 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         /** Premium Manual Interval bounds, remembered across trials and purchases. */
         val manualFromSeconds: Int = ManualInterval.DEFAULT_FROM_SECONDS,
         val manualToSeconds: Int = ManualInterval.DEFAULT_TO_SECONDS,
+        /**
+         * Slow Main-screen visibility preference for the blip counter. It never
+         * touches recording: the count is kept even while hidden.
+         */
+        val showBlipCounter: Boolean = true,
+        /**
+         * Slow preference for the premium Blip Glow effect. ON means "show the
+         * effect when access permits" — it grants nothing by itself.
+         */
+        val blipGlowEnabled: Boolean = true,
     )
 
     val settings: Flow<Settings> = dataStore.data
@@ -68,6 +79,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                 developerAccessExpiryMillis = p[DEVELOPER_EXPIRY]?.coerceAtLeast(0L) ?: 0L,
                 manualFromSeconds = manual.first,
                 manualToSeconds = manual.second,
+                showBlipCounter = p[SHOW_COUNTER] ?: true,
+                blipGlowEnabled = p[BLIP_GLOW] ?: true,
             )
         }
 
@@ -121,10 +134,22 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    /** Main-screen visibility of the blip counter; recording is unaffected. */
+    suspend fun setShowBlipCounter(show: Boolean) {
+        dataStore.edit { it[SHOW_COUNTER] = show }
+    }
+
+    /** Blip Glow preference; access is decided elsewhere, never here. */
+    suspend fun setBlipGlowEnabled(enabled: Boolean) {
+        dataStore.edit { it[BLIP_GLOW] = enabled }
+    }
+
     /**
      * Drops both temporary grants in ONE edit, so access recomputes once instead of
-     * flickering through a half-cleared state. Purchases, volume, interval, pool and
-     * theme are deliberately left alone: this returns the app to free + owned.
+     * flickering through a half-cleared state. Purchases, volume, interval, pool,
+     * theme, the counter/glow preferences are deliberately left alone: this returns
+     * the app to free + owned. Lifetime statistics live in their own store and are
+     * never reset — they back the permanent 100K Premium reward.
      */
     suspend fun clearTemporaryAccess() {
         dataStore.edit { prefs ->
@@ -176,6 +201,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         private val MANUAL_FROM = intPreferencesKey("manual_from_seconds")
         private val MANUAL_TO = intPreferencesKey("manual_to_seconds")
         private val LEGACY_SOUND = stringPreferencesKey("sound")
+        private val SHOW_COUNTER = booleanPreferencesKey("show_blip_counter")
+        private val BLIP_GLOW = booleanPreferencesKey("blip_glow_enabled")
 
         fun fromContext(context: Context): SettingsRepository =
             SettingsRepository(context.problipDataStore)

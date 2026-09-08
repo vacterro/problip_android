@@ -49,6 +49,7 @@
     <string name="included_label">同梱</string>
     <string name="trial_format">試用 %1$s</string>
     <string name="try_5_min">5分試用</string>
+    <string name="earned_label">獲得済み</string>
     <string name="remaining_format">残り %1$s</string>
     <string name="developer_unlocked_title">開発者アクセス解除</string>
     <string name="developer_unlocked_body">プレミアム7日間</string>
@@ -57,6 +58,19 @@
     <string name="error_playback">再生に失敗しました</string>
 
     <string name="settings_title">設定</string>
+    <string name="statistics_section">統計</string>
+    <string name="stats_today">今日</string>
+    <string name="stats_week">今週</string>
+    <string name="stats_month">今月</string>
+    <string name="stats_total">合計</string>
+    <string name="blips_format">ブリップ %1$s</string>
+    <string name="premium_reward_progress">プレミアム報酬  %1$s / %2$s</string>
+    <string name="premium_reward_earned">プレミアム報酬  獲得済み</string>
+    <string name="visual_section">表示</string>
+    <string name="show_blip_counter">カウンターを表示</string>
+    <string name="blip_glow">ブリップグロー</string>
+    <string name="toggle_on">オン</string>
+    <string name="toggle_off">オフ</string>
     <string name="temporary_access">期間限定アクセス</string>
     <string name="developer_access">開発者アクセス</string>
     <string name="reset_temporary_access">期間限定アクセスをリセット</string>
@@ -124,6 +138,8 @@
     <string name="help_intervals_body">• 4-7 — 鳴動間隔はランダム秒。\n• 5 / 10 / 15 / 20 / 30 — 固定プリセット。\n• パルス — 5秒ごと、ランダム10-20秒と交互。\n• 手動 — 開始/終了秒を指定。(プレミアム)</string>
     <string name="help_premium">プレミアム / 試用</string>
     <string name="help_premium_body">• プレミアムは5分間試用できます。\n• 試用は自動更新されません。\n• 新しい試用は手動で何度でも開始できます。\n• 購入は永久で期限切れになりません。</string>
+    <string name="help_statistics">統計</string>
+    <string name="help_statistics_body">• 成功したブリップのみを数えます。\n• 設定には今日 / 今週 / 今月 / 合計を表示。\n• 合計100,000ブリップでプレミアムを永久的に解放。\n• 進捗はアプリ内データ — Problipにアカウントもサーバーもありません。</string>
     <string name="help_background">バックグラウンド</string>
     <string name="help_background_body">• 再生中は常設の通知を表示します。\n• 通知の停止ボタンでアプリを開かずに再生を止められます。</string>
     <string name="help_tips">ヒント</string>

@@ -1,4 +1,4 @@
-package com.vacster.problip.service
+﻿package com.vacster.problip.service
 
 import com.vacster.problip.audio.SoundCatalog
 import com.vacster.problip.billing.ProductCatalog
@@ -21,8 +21,8 @@ import org.junit.Test
 /**
  * Cold process start: the FIRST session of a process must honour what is on disk.
  *
- * Every test here reproduces the same race the barrier exists for — persisted
- * Settings arrive before the ownership cache has been seeded — and asserts that
+ * Every test here reproduces the same race the barrier exists for вЂ” persisted
+ * Settings arrive before the ownership cache has been seeded вЂ” and asserts that
  * the plan is built from the late snapshot, not from the empty placeholder. The
  * pre-barrier behaviour is asserted too, so these tests fail if the barrier is
  * ever removed rather than silently passing on timing luck.
@@ -43,6 +43,7 @@ class ColdStartTest {
         val owned = MutableStateFlow<Set<String>>(emptySet())
         val accessReady = MutableStateFlow(false)
         val access = MutableStateFlow(PremiumAccess())
+        val statsReady = MutableStateFlow(false)
 
         /** What the cache seed does a few millis into the process. */
         fun seedCache(ids: Set<String>) {
@@ -62,6 +63,7 @@ class ColdStartTest {
         ownedNow = { owned.value },
         accessReady = accessReady,
         accessNow = { access.value },
+        statsReady = statsReady,
     )
 
     @Test
@@ -69,7 +71,7 @@ class ColdStartTest {
         val s = Snapshot()
         val plan = async { s.firstPlan() }
 
-        // Settings answer first — this is the moment the old code read ownership.
+        // Settings answer first вЂ” this is the moment the old code read ownership.
         s.settings.value = SettingsRepository.Settings(selectedSounds = setOf(glass))
         runCurrent()
         assertFalse("the plan must not resolve before ownership is known", plan.isCompleted)
@@ -81,6 +83,7 @@ class ColdStartTest {
 
         s.seedCache(setOf(glass))
         s.restoreTemporaryAccess()
+        s.statsReady.value = true
         runCurrent()
 
         assertEquals(setOf(glass), plan.await().pool)
@@ -101,6 +104,7 @@ class ColdStartTest {
 
         s.seedCache(setOf(ProductCatalog.THEME_PACK))
         s.restoreTemporaryAccess()
+        s.statsReady.value = true
         runCurrent()
 
         // Not IntervalConfig.Random(4000, 7000): the persisted MANUAL bounds run.
@@ -118,6 +122,7 @@ class ColdStartTest {
 
         s.seedCache(setOf(ProductCatalog.THEME_PACK))
         s.restoreTemporaryAccess()
+        s.statsReady.value = true
         runCurrent()
 
         assertEquals(IntervalConfig.Pulse(), plan.await().interval)
@@ -139,6 +144,7 @@ class ColdStartTest {
         assertFalse("temporary access is part of the barrier", plan.isCompleted)
 
         s.restoreTemporaryAccess(PremiumAccess(developerAccess = true))
+        s.statsReady.value = true
         runCurrent()
 
         val resolved = plan.await()
@@ -189,5 +195,111 @@ class ColdStartTest {
             access = PremiumAccess(),
         )
         assertEquals(IntervalConfig.Random(4_000L, 7_000L), plan.interval)
+    }
+
+    @Test
+    fun persistedEarnedPremiumIsHonouredByTheFirstPlanOfAColdProcess() = runTest {
+        val s = Snapshot()
+        val plan = async { s.firstPlan() }
+
+        s.settings.value = SettingsRepository.Settings(
+            selectedSounds = setOf(glass),
+            intervalMode = IntervalMode.MANUAL,
+            manualFromSeconds = 9,
+            manualToSeconds = 20,
+        )
+        // Nothing owned from Play; the reward was earned long ago and the stats
+        // store read lands AFTER Settings, exactly like every other snapshot.
+        s.seedCache(emptySet())
+        runCurrent()
+        assertFalse("the earned reward is part of the barrier", plan.isCompleted)
+
+        s.restoreTemporaryAccess(
+            PremiumAccess(earnedPremium = true),
+        )
+        s.statsReady.value = true
+        runCurrent()
+
+        val resolved = plan.await()
+        // Premium sound runs and MANUAL survives, with NO Play ownership.
+        assertEquals(setOf(glass), resolved.pool)
+        assertEquals(IntervalConfig.Random(9_000L, 20_000L), resolved.interval)
+    }
+
+    @Test
+    fun earnedPremiumPulseIsHonouredByTheFirstPlanWithoutOwningThePack() = runTest {
+        val plan = ColdStart.plan(
+            settings = SettingsRepository.Settings(intervalMode = IntervalMode.PULSE),
+            owned = emptySet(),
+            access = PremiumAccess(earnedPremium = true),
+        )
+        assertEquals(IntervalConfig.Pulse(), plan.interval)
+    }
+
+    @Test
+    fun coldStartDoesNotCompleteUntilAccessContainsTheEarnedReward() = runTest {
+        // THE integration race from the hardening audit: persisted earned=true,
+        // premium sound + MANUAL selected, no Play ownership — and the
+        // temporary-access snapshot resolves BEFORE the stats read. The barrier
+        // must NOT complete on accessReady alone: TrialCoordinator.ready now
+        // includes earned readiness, so the FIRST plan already carries
+        // earned=true. No transient free fallback.
+        val store = MutableStateFlow(com.vacster.problip.trial.TemporaryAccess())
+        val earned = MutableStateFlow(false)
+        val earnedReady = MutableStateFlow(false)
+        val trials = com.vacster.problip.trial.TrialCoordinator(
+            persisted = store,
+            update = { transform ->
+                store.value = store.value.copy(trialExpiries = transform(store.value.trialExpiries))
+            },
+            setDeveloperExpiry = { },
+            clearTemporary = { store.value = com.vacster.problip.trial.TemporaryAccess() },
+            scope = backgroundScope,
+            clock = { 1_000_000L },
+            earnedPremium = earned,
+            earnedReady = earnedReady,
+        )
+        trials.start()
+        runCurrent()
+
+        val s = Snapshot()
+        val alwaysStatsReady = MutableStateFlow(true)
+        val plan = async {
+            ColdStart.awaitFirstPlan(
+                settings = s.settings,
+                ownershipReady = s.ownershipReady,
+                ownedNow = { s.owned.value },
+                accessReady = trials.ready,
+                accessNow = { trials.access.value },
+                // The ColdStart statsReady input exists as defense in depth, but
+                // the service's real invariant is inside TrialCoordinator.ready:
+                // ready already implies earned init, and accessNow already carries
+                // the reward. This extra barrier is permanently true here so the
+                // test proves the earned-ready guarantee of trials.ready alone.
+                statsReady = alwaysStatsReady,
+            )
+        }
+
+        s.settings.value = SettingsRepository.Settings(
+            selectedSounds = setOf(glass),
+            intervalMode = IntervalMode.MANUAL,
+            manualFromSeconds = 9,
+            manualToSeconds = 20,
+        )
+        s.seedCache(emptySet())
+        runCurrent()
+        // Temporary access resolved (empty map) BEFORE stats — yet the plan must
+        // still be waiting, because access.earnedPremium is not initialized.
+        assertFalse("cold start must not complete before earned is initialized", plan.isCompleted)
+
+        // The stats DataStore answers: the persisted reward becomes real.
+        earned.value = true
+        earnedReady.value = true
+        runCurrent()
+
+        val resolved = plan.await()
+        // Premium sound AND the persisted MANUAL bounds — no free fallback.
+        assertEquals(setOf(glass), resolved.pool)
+        assertEquals(IntervalConfig.Random(9_000L, 20_000L), resolved.interval)
     }
 }
