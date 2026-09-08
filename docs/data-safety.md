@@ -1,30 +1,57 @@
 # Play Data Safety — Problip
 
-Wave: W9. Derived from the shipped code, not from intent. Re-verify before every
-Data Safety submission; Play's form and policy wording change.
+Waves: W9 + T-27/T-28/T-30 refresh. Derived from the shipped code, not from
+intent. Re-verify before every Data Safety submission; Play's form and policy
+wording change (live Console guidance = REVERIFY_AT_SUBMISSION).
 
-Evidence base (2026-09-04, re-verified 2026-09-05 against Play Billing 9.1.0):
+Evidence base (2026-09-08, re-verified at HEAD dd742e3 + T-30 against Play
+Billing 9.1.0):
 
 - App-declared permissions: `app/src/main/AndroidManifest.xml`
 - Effective permissions after manifest merge:
-  `app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml`
+  `app/build/intermediates/merged_manifests/release/processReleaseManifest/AndroidManifest.xml`
+  (and on the shipped artifact: `aapt2 dump badging` over the release APK)
 - Dependency inventory: `gradlew :app:dependencies --configuration releaseRuntimeClasspath`
-- Source audit: no match in `app/src` for `HttpURLConnection|OkHttp|Retrofit|java.net|Socket|URL(|WebView|firebase|Analytics|AdvertisingId`
+- Source audit (2026-09-08): grep over `app/src/main/java` for
+  `HttpURLConnection|OkHttp|Retrofit|java\.net|Socket|WebView|firebase|Analytics|AdvertisingId`
+  — the only hit is a HelpDialog comment stating there is **no WebView**.
+  Zero analytics/backend/ad-id code.
+
+## Local data stores (current product)
+
+Two separate Preferences DataStore files in app-private storage:
+
+| Store | File | Contents |
+|-------|------|----------|
+| Settings | `problip` (`SettingsRepository.kt:25`) | volume, interval/mode, custom MANUAL from/to, selected sounds, theme, per-item five-minute trial expiries, Developer Access expiry, showBlipCounter, blipGlowEnabled, cached Google Play ownership state |
+| Statistics | `problip_stats` (`BlipStatsRepository.kt:22-23`) | local aggregate counts: today / ISO-week / month / total successful blips, plus the `earnedPremium` flag latched at 100,000 successful blips |
+
+The stats store is local only. **No counter, aggregate, timestamp or blip
+history is transmitted anywhere** — the app has no networking code of its own
+(source audit above). The earned flag is local app data, distinct from Google
+Play ownership; clearing app data can remove it (no survival promise).
 
 ## Form answers
 
 | Question | Answer | Basis |
 |----------|--------|-------|
-| Does your app collect or share any of the required user data types? | **No** | App has no network code, no accounts, no identifiers, no analytics/ads SDK. All settings stay in app-private DataStore. |
+| Does your app collect or share any of the required user data types? | **No** | App has no network code, no accounts, no identifiers, no analytics/ads SDK. Settings AND the `problip_stats` aggregates stay in app-private local DataStore files; nothing is transmitted. A local counter that never leaves the device is not collection under the form's definitions — **REVERIFY_AT_SUBMISSION** against current Console guidance before relying on this. |
 | Is all of the user data collected by your app encrypted in transit? | N/A (nothing collected) | No app-originated traffic. Billing traffic is Google Play's own TLS channel. |
-| Do you provide a way for users to request that their data is deleted? | N/A (nothing collected) | Uninstall removes the local DataStore file; there is no server-side copy. |
-| Data types: location, personal info, financial info, health, messages, photos, audio recordings, files, calendar, contacts, app activity, web browsing, app info and performance, device or other IDs | **None** | No matching permission, no matching API use. Problip plays audio; it never records it. |
+| Do you provide a way for users to request that their data is deleted? | N/A (nothing collected) | Uninstall removes both local DataStore files; there is no server-side copy. |
+| Data types: location, personal info, financial info, health, messages, photos, audio recordings, files, calendar, contacts, app activity, web browsing, app info and performance, device or other IDs | **None** | No matching permission, no matching API use. Problip plays audio; it never records it. The stats aggregates are counts of in-app events, not user-identifying data. |
 | Purchase history | **Not declared as app collection** | One-time purchases are processed by Google Play. Play Billing returns ownership state to the app; the app caches it locally and transmits nothing. Google Play's own processing is disclosed by Google, not by this app. **Re-check this line against current Play guidance at submission time.** |
 | Committed to follow the Play Families policy | Only if the store listing targets children | Not planned for v1.0. |
 
-Privacy policy URL: publish `docs/privacy-policy.md` at a stable public URL and
-paste that URL into the Play Console listing. The policy file still contains a
-`<ADD CONTACT EMAIL BEFORE PUBLISHING>` placeholder.
+Do not automatically flip any final Play Console answer merely because a local
+counter now exists — the deciding fact is transmission, and the current code
+transmits nothing (see the source audit above). Keep every Play-form
+interpretation as REVERIFY_AT_SUBMISSION; do not fabricate current Console
+questions from memory.
+
+Privacy policy URL: publish `docs/privacy-policy.md` at a stable public URL
+after a real contact email is supplied (blocker: HUMAN_CONTACT_REQUIRED) and
+paste that URL into the Play Console listing. The in-app link points there
+(T-015 owns publication).
 
 ## Permission inventory
 
@@ -32,8 +59,11 @@ Declared by Problip:
 
 - `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK` — user-started beep
   session, `foregroundServiceType="mediaPlayback"`, visible notification,
-  user-stoppable (declaration text belongs to W10).
+  user-stoppable (declaration text: `docs/play-fgs-declaration.md`).
 - `POST_NOTIFICATIONS` — the session notification.
+- `WAKE_LOCK` — one service-owned `PARTIAL_WAKE_LOCK` held only while a session
+  is RUNNING so screen-off intervals stay accurate (see
+  `docs/play-fgs-declaration.md` for the implementation evidence).
 
 Added by the Google Play Billing library through manifest merge:
 
@@ -41,8 +71,8 @@ Added by the Google Play Billing library through manifest merge:
 - `com.vacster.problip.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` (AndroidX
   local-broadcast plumbing; not a user-facing permission)
 
-No location, storage, contacts, camera, or microphone permission exists in the
-merged manifest.
+No location, storage, contacts, camera, microphone, exact-alarm or
+battery-optimization permission exists in the merged manifest.
 
 ## Third-party SDK inventory
 
@@ -56,7 +86,9 @@ non-Kotlin dependency. It pulls transitively:
 
 Everything else on the release runtime classpath is `androidx.*`,
 `org.jetbrains.kotlin*`, `com.squareup.okio` (a DataStore dependency),
-`com.google.guava:listenablefuture`, `org.jspecify:jspecify`.
+`com.google.guava:listenablefuture`, `org.jspecify:jspecify`. No analytics SDK,
+no ad SDK, no crash reporter, no location SDK, no networking client of Problip's
+own.
 
 Two deliberate dependency decisions (`app/build.gradle.kts`):
 
@@ -69,7 +101,8 @@ Two deliberate dependency decisions (`app/build.gradle.kts`):
    appears in `releaseRuntimeClasspath` (placereport reaches the graph only
    through location, so one exclude drops both), the release APK dex contains no
    `gms/location` or `placereport` strings, and the merged release manifest
-   permission set is unchanged. A live purchase still has to pass on a device
+   permission set is unchanged. The exclusion is re-confirmed for this wave in
+   the T-30 dependency sweep. A live purchase still has to pass on a device
    before release (tracked with the live purchase gate).
 2. `androidx.fragment:fragment` is constrained to 1.8.6. `play-services-base`
    resolved it to 1.1.0, which is below the 1.3.0 that
