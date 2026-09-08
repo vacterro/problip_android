@@ -1,6 +1,7 @@
 package com.vacster.problip.ui
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -42,12 +43,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -255,16 +258,12 @@ fun ProblipScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "PROBLIP",
-                    color = P.Gold,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    lineHeight = 24.sp,
-                    maxLines = 1,
-                    // No visible hint, no long-press menu: the title is just a title
-                    // until it has been held for twenty seconds.
+                // Mark + wordmark inside ONE gesture hit target: the hidden
+                // Developer Access chord depends on holding the PROBLIP title
+                // for twenty seconds, so the mark is part of that same target
+                // (decorative to screen readers, never a second tap surface).
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier =
                         Modifier.pointerInput(Unit) {
                             detectTapGestures(
@@ -283,7 +282,26 @@ fun ProblipScreen(
                                 }
                             )
                         },
-                )
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_problip_mark),
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(P.Gold),
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "PROBLIP",
+                        color = P.Gold,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        lineHeight = 24.sp,
+                        maxLines = 1,
+                        // No visible hint, no long-press menu: the title is just a title
+                        // until it has been held for twenty seconds.
+                    )
+                }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,

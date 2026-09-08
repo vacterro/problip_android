@@ -11,14 +11,16 @@ data class ThemeEntry(
 )
 
 /**
- * The sixteen Wintage palette designs. IDs are persistence keys and never change;
+ * The fifteen Wintage palette designs. IDs are persistence keys and never change;
  * display names may be reworded freely.
  *
  * Golden Default keeps the original free id [CLASSIC] instead of gaining a second
- * premium entry, so the catalog is one free theme plus fifteen premium ones. The
+ * premium entry, so the catalog is one free theme plus fourteen premium ones. The
  * pre-release placeholder palettes (Terminal/Phosphor/Midnight/Amber/Pink) were
  * replaced outright; their stored ids resolve to Golden Default like any unknown
- * value, which is safe because nothing has shipped publicly.
+ * value, which is safe because nothing has shipped publicly. Wintage's `custom`
+ * palette was removed for release because it duplicated Golden Default exactly;
+ * [normalize] maps its stored id back to Golden Default (see [LEGACY_IDS]).
  *
  * List order is the Themes screen order: the free theme first, then Wintage's own
  * `order` metadata.
@@ -40,9 +42,6 @@ object ThemeCatalog {
     val NORD = ThemeEntry("theme_wintage_nord", "Nord", free = false)
     val SOLARIZED = ThemeEntry("theme_wintage_solarized", "Solarized Dark", free = false)
 
-    /** Wintage's editable palette, imported as a fixed preset: no editor in Problip. */
-    val CUSTOM = ThemeEntry("theme_wintage_custom", "Custom", free = false)
-
     val all: List<ThemeEntry> = listOf(
         CLASSIC,
         GOLDEN,
@@ -59,10 +58,20 @@ object ThemeCatalog {
         DRACULA,
         NORD,
         SOLARIZED,
-        CUSTOM,
     )
 
+    /**
+     * Stored ids this release no longer exposes, normalized to Golden Default on
+     * read. Wintage's editable Custom was imported as a fixed preset that exactly
+     * duplicated Golden Default, so local testers holding it keep working instead
+     * of seeing an invisible selected theme.
+     */
+    private val LEGACY_IDS: Map<String, ThemeEntry> = mapOf("theme_wintage_custom" to CLASSIC)
+
     fun byId(id: String): ThemeEntry? = all.firstOrNull { it.id == id }
+
+    /** Maps a removed-but-stored id to its replacement; unknown ids pass through. */
+    fun normalize(id: String): String = LEGACY_IDS[id]?.id ?: id
 
     fun isValidId(id: String): Boolean = byId(id) != null
 
@@ -80,7 +89,7 @@ object ThemeCatalog {
         ownsThemePack: Boolean = false,
         trials: Set<String> = emptySet(),
     ): ThemeEntry {
-        val entry = id?.let { byId(it) } ?: return CLASSIC
+        val entry = id?.let { byId(normalize(it)) } ?: return CLASSIC
         return when {
             entry.free -> entry
             ownsThemePack -> entry

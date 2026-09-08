@@ -69,7 +69,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                     IntervalMode.entries.firstOrNull { it.name == stored }
                 } ?: IntervalMode.RANDOM_4_7,
                 selectedSounds = selectedSounds(p),
-                themeId = p[THEME]?.takeIf { ThemeCatalog.isValidId(it) } ?: ThemeCatalog.CLASSIC.id,
+                // A removed catalog id (theme_wintage_custom) normalizes to its
+                // replacement on read, so a stored pick never renders invisible.
+                themeId = p[THEME]?.let { ThemeCatalog.normalize(it) }
+                    ?.takeIf { ThemeCatalog.isValidId(it) } ?: ThemeCatalog.CLASSIC.id,
                 ownedProducts = p[OWNED]?.split(',')
                     ?.map { it.trim() }
                     ?.filter { ProductCatalog.isValid(it) }
@@ -99,9 +102,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it[SOUNDS] = safe.sorted().joinToString(",") }
     }
 
-    /** Only catalog ids are stored; unknown ids fall back to Classic. */
+    /** Only catalog ids are stored; unknown ids and removed ids fall back to Classic. */
     suspend fun setTheme(themeId: String) {
-        dataStore.edit { it[THEME] = if (ThemeCatalog.isValidId(themeId)) themeId else ThemeCatalog.CLASSIC.id }
+        val normalized = ThemeCatalog.normalize(themeId)
+        dataStore.edit { it[THEME] = if (ThemeCatalog.isValidId(normalized)) normalized else ThemeCatalog.CLASSIC.id }
     }
 
     /** Written only from successful Play purchase queries. */

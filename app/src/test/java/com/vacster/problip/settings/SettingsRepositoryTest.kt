@@ -64,14 +64,31 @@ class SettingsRepositoryTest {
         val (repo3, _) = newRepo()
         repo3.setSelectedSounds(setOf("sound_original", "sound_glass"))
         assertEquals(setOf("sound_original", "sound_glass"), repo3.settings.first().selectedSounds)
+    }
 
-        val (repo4, _) = newRepo()
-        repo4.setTheme("theme_wintage_nord") // locked ids persist for post-purchase activation
-        assertEquals("theme_wintage_nord", repo4.settings.first().themeId)
+    @Test
+    fun setThemeStoresOnlyCatalogIds() = runBlocking {
+        val (repo, _) = newRepo()
+        repo.setTheme("theme_wintage_nord") // locked ids persist for post-purchase activation
+        assertEquals("theme_wintage_nord", repo.settings.first().themeId)
+    }
 
-        val (repo5, _) = newRepo()
-        repo5.setTheme("not_a_theme")
-        assertEquals("theme_classic", repo5.settings.first().themeId)
+    @Test
+    fun storedCustomThemeIdNormalizesToGoldenDefaultOnRead() = runBlocking {
+        // Local testers could persist theme_wintage_custom before the duplicate
+        // was removed; the stored pick must read back as visible Golden Default.
+        // Two fresh stores: reading and writing must never see the removed id.
+        val (repo, ds) = newRepo()
+        ds.edit { it[stringPreferencesKey("theme")] = "theme_wintage_custom" }
+        assertEquals("theme_classic", repo.settings.first().themeId)
+
+        val (repo2, _) = newRepo()
+        repo2.setTheme("theme_wintage_custom")
+        assertEquals("theme_classic", repo2.settings.first().themeId)
+
+        val (repo3, _) = newRepo()
+        repo3.setTheme("not_a_theme")
+        assertEquals("theme_classic", repo3.settings.first().themeId)
     }
 
     @Test

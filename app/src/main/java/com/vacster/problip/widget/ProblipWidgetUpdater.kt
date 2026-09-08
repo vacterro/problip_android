@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.view.View
 import android.widget.RemoteViews
 import com.vacster.problip.MainActivity
 import com.vacster.problip.R
@@ -27,8 +28,21 @@ object ProblipWidgetUpdater {
 
     fun update(context: Context, manager: AppWidgetManager, ids: IntArray) {
         if (ids.isEmpty()) return
-        manager.updateAppWidget(ids, render(context))
+        for (id in ids) {
+            val options = manager.getAppWidgetOptions(id)
+            // Launchers that report no size keep the compact baseline: the mark
+            // alone carries the brand, and nothing is clipped guessing at space.
+            val minWidthDp =
+                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
+                    .takeIf { it > 0 }
+                    ?: COMPACT_BASELINE_WIDTH_DP
+            val titleVisible = WidgetPresentation.titleVisible(minWidthDp)
+            manager.updateAppWidget(id, render(context, titleVisible))
+        }
     }
+
+    /** The width a size-ignorant launcher is treated as: compact, 1x1 baseline. */
+    internal const val COMPACT_BASELINE_WIDTH_DP = 40
 
     /** Resource mapping the pure state pins in [WidgetStateTest] hold stable. */
     internal fun statusResFor(status: WidgetStatus): Int =
@@ -45,7 +59,7 @@ object ProblipWidgetUpdater {
             WidgetAction.STOP -> R.string.widget_button_stop
         }
 
-    private fun render(context: Context): RemoteViews {
+    private fun render(context: Context, titleVisible: Boolean): RemoteViews {
         // RemoteViews text is resolved here, outside any activity, so the
         // in-app locale override has to be applied by hand below Android 13.
         val localized = context.withAppLocale()
@@ -55,9 +69,12 @@ object ProblipWidgetUpdater {
         return RemoteViews(context.packageName, R.layout.widget_problip).apply {
             setTextViewText(R.id.widget_status, statusLabel)
             setTextViewText(R.id.widget_button, "[ $buttonLabel ]")
+            setViewVisibility(R.id.widget_title, if (titleVisible) View.VISIBLE else View.GONE)
             setOnClickPendingIntent(R.id.widget_button, togglePendingIntent(context))
-            // The title opens the app: the widget itself must never ask for a
-            // runtime permission, and the full UI is where that flow lives.
+            // The mark and (when shown) the title open the app: the widget itself
+            // must never ask for a runtime permission, and the full UI is where
+            // that flow lives.
+            setOnClickPendingIntent(R.id.widget_mark, openAppPendingIntent(context))
             setOnClickPendingIntent(R.id.widget_title, openAppPendingIntent(context))
         }
     }

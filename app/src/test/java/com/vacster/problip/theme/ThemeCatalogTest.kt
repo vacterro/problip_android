@@ -1,5 +1,6 @@
 package com.vacster.problip.theme
 
+import com.vacster.problip.ui.theme.paletteFor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -8,8 +9,8 @@ import org.junit.Test
 class ThemeCatalogTest {
 
     @Test
-    fun catalogHoldsSixteenWintagePaletteDesignsInScreenOrder() {
-        assertEquals(16, ThemeCatalog.all.size)
+    fun catalogHoldsFifteenWintagePaletteDesignsInScreenOrder() {
+        assertEquals(15, ThemeCatalog.all.size)
         assertEquals(
             listOf(
                 "theme_classic",
@@ -27,7 +28,6 @@ class ThemeCatalogTest {
                 "theme_wintage_dracula",
                 "theme_wintage_nord",
                 "theme_wintage_solarized",
-                "theme_wintage_custom",
             ),
             ThemeCatalog.all.map { it.id },
         )
@@ -55,6 +55,27 @@ class ThemeCatalogTest {
                 assertFalse(ThemeCatalog.isValidId(old))
                 assertEquals(ThemeCatalog.CLASSIC, ThemeCatalog.effective(old))
             }
+    }
+
+    @Test
+    fun legacyCustomIdIsNotVisibleAndResolvesToGoldenDefault() {
+        // Wintage Custom duplicated Golden Default exactly, so the duplicate was
+        // removed for release; a stored pick keeps rendering as Golden Default.
+        assertFalse(ThemeCatalog.isValidId("theme_wintage_custom"))
+        assertTrue(ThemeCatalog.all.none { it.id == "theme_wintage_custom" })
+        assertEquals("theme_classic", ThemeCatalog.normalize("theme_wintage_custom"))
+        assertEquals(ThemeCatalog.CLASSIC, ThemeCatalog.effective("theme_wintage_custom"))
+        // Owned-pack path too: the legacy id must not revive a hidden premium entry.
+        assertEquals(
+            ThemeCatalog.CLASSIC,
+            ThemeCatalog.effective("theme_wintage_custom", ownsThemePack = true),
+        )
+    }
+
+    @Test
+    fun normalizeLeavesEveryVisibleIdUnchanged() {
+        ThemeCatalog.all.forEach { entry -> assertEquals(entry.id, ThemeCatalog.normalize(entry.id)) }
+        assertEquals("totally_unknown", ThemeCatalog.normalize("totally_unknown"))
     }
 
     @Test

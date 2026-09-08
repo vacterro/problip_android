@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Problip mark: a compact square core pulsing inside one square signal ring.
+     The canonical geometry; launcher/notification/widget containers adapt it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#F0D060"
+        android:fillType="evenOdd"
+        android:pathData="M2,2h20v20h-20z M5,5h14v14h-14z" />
+    <path
+        android:fillColor="#F0D060"
+        android:pathData="M9,9h6v6h-6z" />
+</vector>

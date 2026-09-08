@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive launcher foreground: the canonical Problip mark centered inside the
+     adaptive safe zone (66/108 circle). Mark box 34..74, within the 33 dp safe
+     radius. No lettering: at launcher scale it would be microscopic soup. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F0D060"
+        android:fillType="evenOdd"
+        android:pathData="M34,34h40v40h-40z M39,39h30v30h-30z" />
+    <path
+        android:fillColor="#F0D060"
+        android:pathData="M49,49h10v10h-10z" />
+</vector>

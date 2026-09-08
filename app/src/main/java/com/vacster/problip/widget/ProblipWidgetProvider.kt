@@ -22,6 +22,16 @@ class ProblipWidgetProvider : AppWidgetProvider() {
         ProblipWidgetUpdater.update(context, manager, appWidgetIds)
     }
 
+    /** Launcher resize: re-apply the size policy without re-toggling anything. */
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        manager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: android.os.Bundle?,
+    ) {
+        ProblipWidgetUpdater.update(context, manager, intArrayOf(appWidgetId))
+    }
+
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action != ACTION_TOGGLE) return

@@ -42,7 +42,7 @@ class PalettesTest {
         ThemeCatalog.all.forEach { entry ->
             val palette = paletteFor(entry.id)
             assertNotEquals(palette.Bg, palette.Gold)
-            if (entry.id != ThemeCatalog.CLASSIC.id && entry.id != ThemeCatalog.CUSTOM.id) {
+            if (entry.id != ThemeCatalog.CLASSIC.id) {
                 assertNotEquals("palette missing for ${entry.id}", PALETTE_CLASSIC, palette)
             }
         }
@@ -52,15 +52,22 @@ class PalettesTest {
     fun unknownIdFallsBackToGoldenDefault() {
         assertEquals(PALETTE_CLASSIC, paletteFor("nope"))
         assertEquals(PALETTE_CLASSIC, paletteFor("theme_pink"))
+        // The removed Custom duplicate also falls back: nothing visible may repeat it.
+        assertEquals(PALETTE_CLASSIC, paletteFor("theme_wintage_custom"))
     }
 
     @Test
-    fun accentsAreDistinctExceptCustomWhichMirrorsGoldenDefault() {
-        val accents = ThemeCatalog.all
-            .filterNot { it.id == ThemeCatalog.CUSTOM.id }
-            .map { paletteFor(it.id).Gold }
+    fun noVisibleThemeRepeatsGoldenDefaultButTheFreeEntryDoes() {
+        // Exactly one visible theme equals the free palette - the free theme itself.
+        // Removed Custom was the only other one, which is why it was dropped.
+        val defaults = ThemeCatalog.all.filter { paletteFor(it.id) == PALETTE_CLASSIC }
+        assertEquals(listOf(ThemeCatalog.CLASSIC.id), defaults.map { it.id })
+    }
+
+    @Test
+    fun accentsAreDistinctAcrossEveryVisibleTheme() {
+        val accents = ThemeCatalog.all.map { paletteFor(it.id).Gold }
         assertEquals(accents.size, accents.toSet().size)
-        assertEquals(PALETTE_CLASSIC, PALETTE_CUSTOM)
     }
 
     // Exact-value pins: Wintage palettes are imported verbatim, so any recolor fails here.

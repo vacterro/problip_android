@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Primary size 1x1; resizable toward 2x1/2x2. minWidth/minHeight approximate
+     one launcher cell on pre-S launchers; targetCell* pin the 1x1 default on S+. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:description="@string/widget_description"
     android:initialLayout="@layout/widget_problip"
-    android:minHeight="70dp"
-    android:minWidth="180dp"
+    android:minHeight="40dp"
+    android:minResizeHeight="40dp"
+    android:minResizeWidth="40dp"
+    android:minWidth="40dp"
     android:previewLayout="@layout/widget_problip"
-    android:resizeMode="horizontal"
+    android:resizeMode="horizontal|vertical"
     android:targetCellHeight="1"
-    android:targetCellWidth="2"
+    android:targetCellWidth="1"
     android:updatePeriodMillis="0"
     android:widgetCategory="home_screen"
     tools:targetApi="s" />

@@ -24,7 +24,7 @@ data class ProblipColors(
 val LocalProblipColors = staticCompositionLocalOf { PALETTE_CLASSIC }
 
 /**
- * The sixteen Wintage palettes, copied verbatim from the archive's theme JSON files
+ * The fifteen Wintage palettes, copied verbatim from the archive's theme JSON files
  * so Problip carries no runtime dependency on it. Wintage tokens map to Problip
  * slots as: background -> Bg, surface -> Surface, surfaceRaised -> Raised,
  * bevelLight -> Bevel, borderDark -> BDark, borderHighlight -> Gold,
@@ -51,7 +51,6 @@ private val PALETTES: Map<String, ProblipColors> by lazy {
         ThemeCatalog.DRACULA.id to PALETTE_DRACULA,
         ThemeCatalog.NORD.id to PALETTE_NORD,
         ThemeCatalog.SOLARIZED.id to PALETTE_SOLARIZED,
-        ThemeCatalog.CUSTOM.id to PALETTE_CUSTOM,
     )
 }
 
@@ -314,25 +313,4 @@ internal val PALETTE_SOLARIZED = ProblipColors(
     Success = Color(0xFF4A7A20),
     Warning = Color(0xFF7A7A20),
     Danger = Color(0xFFDD7D7D),
-)
-
-/**
- * Custom: Wintage `custom.json` as it stands today — a fixed preset, not an
- * editor. Its current values are Golden Default's, so the two palettes are
- * deliberately identical until the archive's Custom is edited again.
- */
-internal val PALETTE_CUSTOM = ProblipColors(
-    Bg = Color(0xFF1A1810),
-    Surface = Color(0xFF332E22),
-    Raised = Color(0xFF3D372A),
-    Bevel = Color(0xFF75663D),
-    BDark = Color(0xFF100E08),
-    Gold = Color(0xFFF0D060),
-    TextMain = Color(0xFFD4C89A),
-    TextDim = Color(0xFF9C9371),
-    Muted = Color(0xFF6E674E),
-    Compare = Color(0xFF14120C),
-    Success = Color(0xFF4A7A20),
-    Warning = Color(0xFF7A7A20),
-    Danger = Color(0xFFD66464),
 )
