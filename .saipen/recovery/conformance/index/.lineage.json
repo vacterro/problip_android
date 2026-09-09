@@ -1,7 +1,7 @@
 {
-  "content_xor": "cd1cc173484414a378a1224fa413a93b",
-  "inventory_xor": "71ab07184e64466351fcdbc998db2a37",
-  "lineage_hash": "d980ebe35fb9fb595852922fd7db5def988c5901094732f4408d4a32025a0b7b",
+  "content_xor": "b837e85b9473ecc4d4be0b505eec7d42",
+  "inventory_xor": "e40871d2afbd80ad3c13a5042faed6dd",
+  "lineage_hash": "18e0161960952a9fec0cf8d3ff19c46ecb7d0b8dc423e2bc47774fd1c7741553",
   "members": [
     [
       "2026-09-04T19_36_43.308658Z_receipt-801ad4efd951_core_FAIL.json",
@@ -350,9 +350,41 @@
     [
       "2026-09-09T02_55_33.452656Z_receipt-f4238ea7d234_core_PASS.json",
       "2e0e42c67992805c222949b407982e21"
+    ],
+    [
+      "2026-09-09T04_15_31.761349Z_receipt-363a6f093f68_core_FAIL.json",
+      "5e19f7a0aed78d2465182c5a8db104b1"
+    ],
+    [
+      "2026-09-09T04_18_49.500287Z_receipt-0fee1c83db91_core_PASS.json",
+      "581ae6b34a62c71df9c773effb6155a4"
+    ],
+    [
+      "2026-09-09T04_20_05.099378Z_receipt-28d9c64dcc8a_core_PASS.json",
+      "4453f1a9d2c9d3431ec77bf02afcc6ed"
+    ],
+    [
+      "2026-09-09T04_20_23.790386Z_receipt-68e7295ae276_core_PASS.json",
+      "b80258af4a36fefff0bf4eeb49146ee7"
+    ],
+    [
+      "2026-09-09T04_21_46.539774Z_receipt-112cb822d8d5_core_PASS.json",
+      "1f2e4550764540f2e6d5af24b41c1c83"
+    ],
+    [
+      "2026-09-09T04_37_33.025992Z_receipt-1935d981f754_core_PASS.json",
+      "e093192d1368e92900348562991743e3"
+    ],
+    [
+      "2026-09-09T04_41_29.698648Z_receipt-772c17fd1995_core_PASS.json",
+      "0db2785db19fef546dcc0cd181edab6e"
+    ],
+    [
+      "2026-09-09T04_44_43.239940Z_receipt-9559dc1995d7_core_PASS.json",
+      "7d76b51d74cfd96d559565264321d968"
     ]
   ],
-  "receipt_count": 87,
-  "receipt_dir_mtime_ns": 1788922533558206700,
+  "receipt_count": 95,
+  "receipt_dir_mtime_ns": 1788929083371288100,
   "version": 1
 }

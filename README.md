@@ -95,6 +95,16 @@ plan/                   roadmap pack the project is built from
 `reference/wintage/` is documentation, not a dependency: the palettes are compiled
 into `ui/theme/Palettes.kt` as literal colours and nothing reads the JSON at runtime.
 
+### Historical implementation / QA records
+
+Superseded decision/evidence documents kept for provenance — not current specs:
+
+- [Main no-scroll QA](docs/main-no-scroll-qa.md) — layout correction + sizing estimates (2026-09-05)
+- [Astra polish wave](docs/astra-polish-wave.md) — contrast/selection/haptics/lamp wave record
+- [W12 QA hardening](docs/qa-audit-w12.md) — QA audit verdicts + device checklist (W12/W12.1)
+- [Play FGS declaration](docs/play-fgs-declaration.md) — foreground-service declaration + WakeLock evidence + demo script
+- [Release checklist](docs/release-checklist.md) — authoritative gate list (CODE/CONTENT/PHYSICAL/PLAY/POLICY/FINAL)
+
 ## Building
 
 Release identity: **versionName 1.0.0, versionCode 1** (`app/build.gradle.kts`).
