@@ -1,7 +1,7 @@
 {
-  "content_xor": "b37fd7f992b30178d44116c6cbbceb6e",
-  "inventory_xor": "e8e561bcb2edb8ac8625487a2865b617",
-  "lineage_hash": "1b0a0d9885d5e1a46a46648a288fa3995df5c0f3a71e482ad1c55b63db6ff9fb",
+  "content_xor": "396b33e7c8c66ec4b68f74bd29fffdb5",
+  "inventory_xor": "5343123b207fdfd9934e1952b22705ea",
+  "lineage_hash": "8f81fcb5c5f1124a91dc5ca37fcd687f77d679883ac7d70396747ff9feb2fd9d",
   "members": [
     [
       "2026-09-04T19_36_43.308658Z_receipt-801ad4efd951_core_FAIL.json",
@@ -278,9 +278,37 @@
     [
       "2026-09-08T23_21_01.481518Z_receipt-c03885ea6794_core_PASS.json",
       "d90252d94cfe6f370dcf00623be5203e"
+    ],
+    [
+      "2026-09-09T00_56_21.401312Z_receipt-feabaeee743c_core_FAIL.json",
+      "e0e4e5e0495786b74c236b4d0a0822c4"
+    ],
+    [
+      "2026-09-09T00_56_51.207115Z_receipt-82ea3cc27181_core_FAIL.json",
+      "707b073e47bd4117b2917ae35c696561"
+    ],
+    [
+      "2026-09-09T00_59_21.666123Z_receipt-413e7c7042a2_core_FAIL.json",
+      "146d08c1abe5c2c388e3e23ca8e1f081"
+    ],
+    [
+      "2026-09-09T01_05_19.224155Z_receipt-5fedf72f7bfd_core_FAIL.json",
+      "c29b638f2a75c534ff3c9abdb4a8e140"
+    ],
+    [
+      "2026-09-09T01_11_43.945843Z_receipt-5bf62e1476f1_core_PASS.json",
+      "8068b3ee1b4ba8ff9b1a48b3e1a68706"
+    ],
+    [
+      "2026-09-09T01_11_44.862352Z_receipt-4d178b40bc8e_core_PASS.json",
+      "c440ce381c2cbacc70745618610dc81b"
+    ],
+    [
+      "2026-09-09T01_12_39.577753Z_receipt-f1ed1cf10639_core_PASS.json",
+      "88551058d268bdd800cd15ff28c00fa2"
     ]
   ],
-  "receipt_count": 69,
-  "receipt_dir_mtime_ns": 1788909661606232100,
+  "receipt_count": 76,
+  "receipt_dir_mtime_ns": 1788916359695621200,
   "version": 1
 }
