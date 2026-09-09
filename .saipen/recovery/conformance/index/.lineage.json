@@ -1,7 +1,7 @@
 {
-  "content_xor": "013d6e8ff0915d89ca9305b1fe1fd7be",
-  "inventory_xor": "9ee9114ad581725bd5b90d710c4040e4",
-  "lineage_hash": "3c13fcff103d8b044eab795f2538ddf1c8d2bfdd51521f616e770cf53b634c5d",
+  "content_xor": "cd1cc173484414a378a1224fa413a93b",
+  "inventory_xor": "71ab07184e64466351fcdbc998db2a37",
+  "lineage_hash": "d980ebe35fb9fb595852922fd7db5def988c5901094732f4408d4a32025a0b7b",
   "members": [
     [
       "2026-09-04T19_36_43.308658Z_receipt-801ad4efd951_core_FAIL.json",
@@ -338,9 +338,21 @@
     [
       "2026-09-09T02_46_18.821350Z_receipt-cdd85dd38e3b_core_PASS.json",
       "b0cfd0f35a5bb6e6eb40517b23d36331"
+    ],
+    [
+      "2026-09-09T02_54_09.584625Z_receipt-7300e75d962a_core_PASS.json",
+      "d84865dc6140ff65efa64f4601b1ec2b"
+    ],
+    [
+      "2026-09-09T02_55_00.000330Z_receipt-0622292e4ab3_core_PASS.json",
+      "3a6788e6a00736137fbd210c5c25bc8f"
+    ],
+    [
+      "2026-09-09T02_55_33.452656Z_receipt-f4238ea7d234_core_PASS.json",
+      "2e0e42c67992805c222949b407982e21"
     ]
   ],
-  "receipt_count": 84,
-  "receipt_dir_mtime_ns": 1788921978943233600,
+  "receipt_count": 87,
+  "receipt_dir_mtime_ns": 1788922533558206700,
   "version": 1
 }
