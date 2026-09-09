@@ -6,7 +6,11 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Documents the platform default: Android system backup/device transfer
+         may back up app-private data per the user's device/account settings.
+         Problip has no backup agent, no backup rules and no sync of its own. -->
     <application
+        android:allowBackup="true"
         android:name=".ProblipApp"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"

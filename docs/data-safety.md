@@ -16,6 +16,10 @@ Billing 9.1.0):
   `HttpURLConnection|OkHttp|Retrofit|java\.net|Socket|WebView|firebase|Analytics|AdvertisingId`
   — the only hit is a HelpDialog comment stating there is **no WebView**.
   Zero analytics/backend/ad-id code.
+- Manifest backup declaration: `android:allowBackup="true"` set explicitly in
+  `app/src/main/AndroidManifest.xml` (T-30.1). This documents the platform
+  default — it adds no backup agent, no custom backup rules and no sync;
+  Android system backup remains controlled by the user's platform settings.
 
 ## Local data stores (current product)
 
@@ -27,15 +31,20 @@ Two separate Preferences DataStore files in app-private storage:
 | Statistics | `problip_stats` (`BlipStatsRepository.kt:22-23`) | local aggregate counts: today / ISO-week / month / total successful blips, plus the `earnedPremium` flag latched at 100,000 successful blips |
 
 The stats store is local only. **No counter, aggregate, timestamp or blip
-history is transmitted anywhere** — the app has no networking code of its own
-(source audit above). The earned flag is local app data, distinct from Google
-Play ownership; clearing app data can remove it (no survival promise).
+history is transmitted anywhere** — Problip does not transmit these statistics
+to a Problip server or third-party analytics service, and the app has no
+networking code of its own (source audit above). Android system
+backup/device-transfer may independently back up app-private data according to
+the user's platform settings. The earned flag is local app data, distinct from
+Google Play ownership; clearing app data removes the current local copy (no
+Problip survival promise — Android backup may restore it depending on platform
+settings, which Problip neither operates nor guarantees).
 
 ## Form answers
 
 | Question | Answer | Basis |
 |----------|--------|-------|
-| Does your app collect or share any of the required user data types? | **No** | App has no network code, no accounts, no identifiers, no analytics/ads SDK. Settings AND the `problip_stats` aggregates stay in app-private local DataStore files; nothing is transmitted. A local counter that never leaves the device is not collection under the form's definitions — **REVERIFY_AT_SUBMISSION** against current Console guidance before relying on this. |
+| Does your app collect or share any of the required user data types? | **No** | App has no network code, no accounts, no identifiers, no analytics/ads SDK. Settings AND the `problip_stats` aggregates stay in app-private local DataStore files; nothing is transmitted. Android system backup/device-transfer may independently back up app-private data according to the user's platform settings. A local counter that never leaves the device through the app is not collection under the form's definitions — **REVERIFY_AT_SUBMISSION** against current Console guidance before relying on this. |
 | Is all of the user data collected by your app encrypted in transit? | N/A (nothing collected) | No app-originated traffic. Billing traffic is Google Play's own TLS channel. |
 | Do you provide a way for users to request that their data is deleted? | N/A (nothing collected) | Uninstall removes both local DataStore files; there is no server-side copy. |
 | Data types: location, personal info, financial info, health, messages, photos, audio recordings, files, calendar, contacts, app activity, web browsing, app info and performance, device or other IDs | **None** | No matching permission, no matching API use. Problip plays audio; it never records it. The stats aggregates are counts of in-app events, not user-identifying data. |
@@ -47,6 +56,24 @@ counter now exists — the deciding fact is transmission, and the current code
 transmits nothing (see the source audit above). Keep every Play-form
 interpretation as REVERIFY_AT_SUBMISSION; do not fabricate current Console
 questions from memory.
+
+Do not treat "no custom networking code" as proof that third-party SDKs are
+irrelevant to the Data Safety form: at live submission, re-verify the current
+Play guidance for the Google Play Billing SDK, purchase history / ownership
+state, and third-party SDK handling generally (the Billing-vendored
+`transport-backend-cct` below is the concrete example).
+
+## Android system backup (explicit declaration)
+
+`android:allowBackup="true"` is set explicitly in the manifest (T-30.1). It
+documents the existing platform default; it does not change the product
+contract and it does not create any Problip backup, sync or account mechanism.
+Android system backup / device-transfer may preserve and restore app-private
+data (including the local DataStore files) depending on the user's device,
+account and platform settings; Problip does not operate that service, does not
+guarantee that backup happens, and does not guarantee cross-device
+restoration. This is not app-operated data transfer and is not declared as
+collection on the form above — **REVERIFY_AT_SUBMISSION**.
 
 Privacy policy URL: publish `docs/privacy-policy.md` at a stable public URL
 after a real contact email is supplied (blocker: HUMAN_CONTACT_REQUIRED) and

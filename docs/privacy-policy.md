@@ -48,24 +48,42 @@ through Problip.
 ## Blip statistics stay local
 
 The TODAY / WEEK / MONTH / TOTAL statistics are aggregate counts of successful
-blips stored in a local app database on your device. **No blip history, no blip
-timestamps, and no statistics are uploaded** — Problip has no server to send
-them to. Clearing the app's data or uninstalling Problip deletes them; they are
-not restored afterwards and Problip does not promise their survival across
-"Clear App Data" or a cross-device restore.
+blips stored in local app storage (a local DataStore) on your device. **No blip
+history, no blip timestamps, and no statistics are uploaded** — Problip has no
+server to send them to. Clearing the app's data or uninstalling Problip deletes
+current local copies.
+
+Separately from Problip, Android system backup and device-transfer features may
+independently preserve app-private data and restore it later (for example onto
+the same or a new device), depending on your device, account and platform
+settings. Problip does not operate that service, does not control it, does not
+guarantee that any backup happens, and does not guarantee cross-device
+restoration. Depending on those settings, your statistics — and even the local
+100,000-blip earned Premium flag — may reappear after reinstall or transfer if
+Android restores the relevant app data, but Problip does not promise it.
 
 ## The 100K earned Premium flag
 
 Reaching 100,000 successful blips permanently unlocks Problip's premium content
 on that device. This earned unlock is **local app data**. It is distinct from
 Google Play ownership: Play purchases are recorded by Google, while the earned
-flag exists only in Problip's local storage. Like all local data, it is not
-guaranteed to survive clearing app data, uninstalling, or moving to a new
-device.
+flag exists only in Problip's local storage. Clearing the app's data or
+uninstalling Problip removes the current local copy, and Problip does not
+promise the flag's survival across them.
 
-Uninstalling Problip deletes all of the data listed above. Android may include
-app data in a device backup if you have enabled backups; that backup is
-controlled by your Android/Google account settings, not by Problip.
+Separately, Android system backup / device-transfer may preserve and restore
+some app-private data — including this flag — depending on the user's device,
+account and platform settings. Problip does not operate or control that backup
+service, does not guarantee that backup happens, and does not guarantee
+cross-device restoration; whether the earned flag reappears is decided by the
+platform, not by Problip.
+
+Uninstalling Problip removes the current installation's local copies of all the
+data listed above. Problip itself has no account, backend or cloud-sync
+mechanism: nothing re-downloads or restores Problip data from Problip. Android
+system backup / device-transfer may independently back up app-private data
+according to the user's platform settings; that backup is controlled by your
+Android/Google account settings, not by Problip.
 
 ## Permissions Problip requests
 
