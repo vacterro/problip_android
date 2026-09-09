@@ -68,6 +68,16 @@
     <string name="premium_reward_earned">プレミアム報酬  獲得済み</string>
     <string name="visual_section">表示</string>
     <string name="show_blip_counter">カウンターを表示</string>
+    <string name="blip_counter_mode">カウンター</string>
+    <string name="counter_mode_off">オフ</string>
+    <string name="counter_mode_total">合計</string>
+    <string name="counter_mode_stats">統計</string>
+    <string name="stats_short_today">今日</string>
+    <string name="stats_short_week">今週</string>
+    <string name="stats_short_month">今月</string>
+    <string name="stats_short_total">合計</string>
+    <string name="stats_strip_a11y">今日: %1$s。今週: %2$s。今月: %3$s。合計: %4$s。</string>
+    <string name="premium_label">プレミアム</string>
     <string name="blip_glow">ブリップグロー</string>
     <string name="toggle_on">オン</string>
     <string name="toggle_off">オフ</string>

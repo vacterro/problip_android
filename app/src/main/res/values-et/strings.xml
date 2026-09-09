@@ -70,6 +70,16 @@
     <string name="premium_reward_earned">PREMIUMI-AUHIND  VÕIDETUD</string>
     <string name="visual_section">VÄLIMUS</string>
     <string name="show_blip_counter">NÄITA LOENDURIT</string>
+    <string name="blip_counter_mode">BLIIBILOENDUR</string>
+    <string name="counter_mode_off">VÄLJAS</string>
+    <string name="counter_mode_total">KOKKU</string>
+    <string name="counter_mode_stats">STATS</string>
+    <string name="stats_short_today">TÄNA</string>
+    <string name="stats_short_week">NÄDAL</string>
+    <string name="stats_short_month">KUU</string>
+    <string name="stats_short_total">KOKKU</string>
+    <string name="stats_strip_a11y">Täna: %1$s. Sel nädalal: %2$s. Sel kuul: %3$s. Kokku: %4$s.</string>
+    <string name="premium_label">PREMIUM</string>
     <string name="blip_glow">BLIIBI HELGIS</string>
     <string name="toggle_on">SEES</string>
     <string name="toggle_off">VÄLJAS</string>

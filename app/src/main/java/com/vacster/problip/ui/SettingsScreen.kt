@@ -4,7 +4,10 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.os.LocaleListCompat
 import com.vacster.problip.R
+import com.vacster.problip.settings.BlipCounterMode
 import com.vacster.problip.trial.PremiumAccess
 import com.vacster.problip.trial.TrialAccess
 import kotlinx.coroutines.delay
@@ -104,11 +109,26 @@ fun SettingsScreen(
         )
 
         SectionLabel(stringResource(R.string.visual_section))
-        ToggleRow(
-            label = stringResource(R.string.show_blip_counter),
-            checked = settings.showBlipCounter,
-            onToggle = viewModel::setShowBlipCounter,
+        // OFF / TOTAL / STATS: a small mutually-exclusive set, so one stable
+        // action per visible choice (compact selector row), never a toggle
+        // cycling hidden meanings. Display only — recording is unaffected.
+        Text(
+            text = stringResource(R.string.blip_counter_mode),
+            color = P.TextMain,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 13.sp,
+            letterSpacing = 1.sp,
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            BlipCounterMode.entries.forEach { mode ->
+                CounterModeButton(
+                    label = stringResource(mode.labelRes()),
+                    selected = settings.blipCounterMode == mode,
+                    onClick = { viewModel.setBlipCounterMode(mode) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
         val glowHasAccess = access.grantsBlipGlow(ownsPack)
         val glowInteraction = GlowUiPolicy.onToggleToggled(settings.blipGlowEnabled)
         ToggleRow(
@@ -124,30 +144,18 @@ fun SettingsScreen(
                 }
             },
         )
-        // Separate access action: offered (and tappable) only while access is absent.
-        if (GlowUiPolicy.tryOffered(glowHasAccess)) {
-            Text(
-                text = stringResource(R.string.try_5_min),
-                color = P.ActionText,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
-                letterSpacing = 1.sp,
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .height(36.dp)
-                        .clickable(role = Role.Button) { viewModel.tryBlipGlow() }
-                        .padding(horizontal = 8.dp, vertical = 8.dp),
-                textAlign = androidx.compose.ui.text.style.TextAlign.End,
-            )
-        } else {
-            GlowAccessLabel(
-                owned = ownsPack,
-                earned = access.earnedPremium,
-                developerAccess = access.developerAccess,
-                expiryMillis = trialExpiries[TrialAccess.FEATURE_BLIP_GLOW],
-                nowMillis = now,
-            )
-        }
+        // The row below the toggle ALWAYS communicates the entitlement state:
+        // preference (ON/OFF) stays separate from ACCESS. A naked ON can never
+        // read as "currently operating" while access is absent.
+        GlowAccessStatus(
+            hasAccess = glowHasAccess,
+            owned = ownsPack,
+            earned = access.earnedPremium,
+            developerAccess = access.developerAccess,
+            expiryMillis = trialExpiries[TrialAccess.FEATURE_BLIP_GLOW],
+            nowMillis = now,
+            onTry = { viewModel.tryBlipGlow() },
+        )
 
         SectionLabel(stringResource(R.string.temporary_access))
         Row(
@@ -206,6 +214,12 @@ private val LanguageOptions = listOf(
     "ja" to "日本語",
 )
 
+internal fun BlipCounterMode.labelRes(): Int = when (this) {
+    BlipCounterMode.OFF -> R.string.counter_mode_off
+    BlipCounterMode.TOTAL -> R.string.counter_mode_total
+    BlipCounterMode.STATS -> R.string.counter_mode_stats
+}
+
 /** One statistics line: label on the left, locale-formatted count on the right. */
 @Composable
 private fun StatRow(label: String, value: String) {
@@ -260,34 +274,109 @@ private fun ToggleRow(label: String, checked: Boolean, onToggle: (Boolean) -> Un
 }
 
 /**
- * Access label for BLIP GLOW: OWNED via the pack, EARNED via the 100K reward,
- * DEV, a running TRIAL countdown, or the offer to TRY 5 MIN.
+ * The BLIP GLOW access row, always present under the toggle.
+ *
+ * No access: "PREMIUM" + a separate TRY 5 MIN action (the toggle itself never
+ * starts or extends a trial). A running trial shows its countdown; owned /
+ * EARNED / DEV show the access source. The toggle's ON/OFF stays pure
+ * preference, so preference and access can never be confused again.
  */
 @Composable
-private fun GlowAccessLabel(
+private fun GlowAccessStatus(
+    hasAccess: Boolean,
     owned: Boolean,
     earned: Boolean,
     developerAccess: Boolean,
     expiryMillis: Long?,
     nowMillis: Long,
+    onTry: () -> Unit,
 ) {
-    val label = accessLabel(
-        free = false,
-        owned = owned,
-        earnedPremium = earned,
-        developerAccess = developerAccess,
-        expiryMillis = expiryMillis,
-        nowMillis = nowMillis,
-    ) ?: return
-    Text(
-        text = label.text(),
-        color = P.ActionText,
-        fontFamily = FontFamily.Monospace,
-        fontSize = 10.sp,
-        letterSpacing = 1.sp,
-        modifier = Modifier.fillMaxWidth(),
-        textAlign = androidx.compose.ui.text.style.TextAlign.End,
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth().height(36.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (GlowUiPolicy.tryOffered(hasAccess)) {
+            Text(
+                text = stringResource(R.string.premium_label),
+                color = P.TextDim,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                letterSpacing = 1.sp,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = stringResource(R.string.try_5_min),
+                color = P.ActionText,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 12.sp,
+                letterSpacing = 1.sp,
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .height(36.dp)
+                        .clickable(role = Role.Button, onClick = onTry)
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            )
+        } else {
+            val label = accessLabel(
+                free = false,
+                owned = owned,
+                earnedPremium = earned,
+                developerAccess = developerAccess,
+                expiryMillis = expiryMillis,
+                nowMillis = nowMillis,
+            ) ?: return
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = label.text(),
+                color = P.ActionText,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 10.sp,
+                letterSpacing = 1.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            )
+        }
+    }
+}
+
+/** One [mode] choice of the counter-mode selector: radio semantics, stable action. */
+@Composable
+private fun CounterModeButton(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Box(
+        modifier =
+            modifier
+                .height(36.dp)
+                .background(if (selected || pressed) P.Compare else P.Raised)
+                .border(
+                    if (selected || pressed) 2.dp else 1.dp,
+                    if (selected || pressed) P.ActionText else P.Edge,
+                )
+                .selectable(
+                    selected = selected,
+                    interactionSource = interaction,
+                    indication = null,
+                    role = Role.RadioButton,
+                    onClick = onClick,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            color = if (selected) P.ActionText else P.TextMain,
+            fontFamily = FontFamily.Monospace,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            fontSize = 12.sp,
+            lineHeight = 15.sp,
+            maxLines = 1,
+        )
+    }
 }
 
 /** One compact row: LANGUAGE and the current selection, SYSTEM when unset. */

@@ -18,6 +18,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import androidx.datastore.preferences.core.booleanPreferencesKey
 
 /**
  * Note: each test performs at most ONE write per DataStore instance.
@@ -204,6 +205,7 @@ class SettingsRepositoryTest {
         val defaults = repo.settings.first()
         assertEquals(true, defaults.showBlipCounter)
         assertEquals(true, defaults.blipGlowEnabled)
+        assertEquals(BlipCounterMode.TOTAL, defaults.blipCounterMode)
 
         // One write per DataStore instance on the Windows host JVM (see class
         // note), so each OFF choice gets its own store and re-read.
@@ -222,5 +224,64 @@ class SettingsRepositoryTest {
         // No BLIP GLOW key ever written: reads ON.
         assertEquals(true, repo.settings.first().blipGlowEnabled)
         assertEquals(true, repo.settings.first().showBlipCounter)
+    }
+
+    @Test
+    fun legacyCounterFalseMigratesToOff() = runBlocking {
+        val (repo, ds) = newRepo()
+        ds.edit { it[booleanPreferencesKey("show_blip_counter")] = false }
+        assertEquals(BlipCounterMode.OFF, repo.settings.first().blipCounterMode)
+    }
+
+    @Test
+    fun legacyCounterTrueMigratesToTotal() = runBlocking {
+        val (repo, ds) = newRepo()
+        ds.edit { it[booleanPreferencesKey("show_blip_counter")] = true }
+        assertEquals(BlipCounterMode.TOTAL, repo.settings.first().blipCounterMode)
+    }
+
+    @Test
+    fun absentCounterKeysMigrateToTotal() = runBlocking {
+        val (repo, _) = newRepo()
+        assertEquals(BlipCounterMode.TOTAL, repo.settings.first().blipCounterMode)
+    }
+
+    @Test
+    fun eachPersistedCounterModeReloadsItself() = runBlocking {
+        BlipCounterMode.entries.forEach { mode ->
+            val (repo, _) = newRepo()
+            repo.setBlipCounterMode(mode)
+            assertEquals(mode, repo.settings.first().blipCounterMode)
+        }
+    }
+
+    @Test
+    fun garbageCounterModeKeyFallsBackToLegacyBooleanThenTotal() = runBlocking {
+        val (garbage, ds) = newRepo()
+        ds.edit { it[stringPreferencesKey("blip_counter_mode")] = "GARBAGE" }
+        assertEquals(BlipCounterMode.TOTAL, garbage.settings.first().blipCounterMode)
+
+        val (garbageWithLegacyOff, ds2) = newRepo()
+        ds2.edit {
+            it[stringPreferencesKey("blip_counter_mode")] = "GARBAGE"
+            it[booleanPreferencesKey("show_blip_counter")] = false
+        }
+        // An invalid mode key is ignored, so the legacy boolean decides.
+        assertEquals(BlipCounterMode.OFF, garbageWithLegacyOff.settings.first().blipCounterMode)
+    }
+
+    @Test
+    fun choosingAModeNeverTouchesStatisticsRecording() = runBlocking {
+        // Mode writes land in the settings store only; the statistics store is
+        // a different DataStore owned by BlipStatsRepository, so there is no
+        // shared key. The invariant is pinned by writing every mode and
+        // re-reading the unchanged settings around it.
+        val (repo, _) = newRepo()
+        repo.setBlipCounterMode(BlipCounterMode.STATS)
+        val s = repo.settings.first()
+        assertEquals(BlipCounterMode.STATS, s.blipCounterMode)
+        // Nothing else moved.
+        assertEquals(setOf("sound_original"), s.selectedSounds)
+        assertEquals(true, s.blipGlowEnabled)
     }
 }

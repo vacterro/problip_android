@@ -20,3 +20,28 @@ internal fun formatBlipCount(count: Long): String {
         ?: Locale.getDefault()
     return NumberFormat.getIntegerInstance(locale).format(count)
 }
+
+/**
+ * MAIN STATS strip display value. Exact and locale-formatted while it plausibly
+ * fits a quarter-width cell (< 100K), deterministic compact rounding only for
+ * genuinely huge lifetime totals: 1.2K / 14K / 1.3M. Grouping digits would
+ * overflow a quarter cell long before 100K.
+ */
+@Composable
+internal fun formatBlipCountForStrip(count: Long): String =
+    if (count < 100_000L) formatBlipCount(count) else blipCountCompact(count)
+
+/** Pure compact rounding for values too wide for a quarter-width strip cell (>= 100K). */
+internal fun blipCountCompact(count: Long): String = when {
+    count < 100_000L -> count.toString()
+    count < 1_000_000L -> {
+        val tenthsK = count / 100L
+        if (tenthsK % 10L == 0L) "${tenthsK / 10L}K"
+        else String.format(java.util.Locale.US, "%.1fK", tenthsK / 10.0)
+    }
+    else -> {
+        val tenthsM = count / 100_000L
+        if (tenthsM % 10L == 0L) "${tenthsM / 10L}M"
+        else String.format(java.util.Locale.US, "%.1fM", tenthsM / 10.0)
+    }
+}

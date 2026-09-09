@@ -74,6 +74,16 @@
     <string name="premium_reward_earned">ПРЕМИУМ-НАГРАДА  ЗАРАБОТАНО</string>
     <string name="visual_section">ОФОРМЛЕНИЕ</string>
     <string name="show_blip_counter">ПОКАЗЫВАТЬ СЧЁТЧИК</string>
+    <string name="blip_counter_mode">СЧЁТЧИК</string>
+    <string name="counter_mode_off">ВЫКЛ</string>
+    <string name="counter_mode_total">ВСЕГО</string>
+    <string name="counter_mode_stats">СТАТ</string>
+    <string name="stats_short_today">СЕГОДНЯ</string>
+    <string name="stats_short_week">НЕДЕЛЯ</string>
+    <string name="stats_short_month">МЕСЯЦ</string>
+    <string name="stats_short_total">ВСЕГО</string>
+    <string name="stats_strip_a11y">Сегодня: %1$s. На этой неделе: %2$s. В этом месяце: %3$s. Всего: %4$s.</string>
+    <string name="premium_label">ПРЕМИУМ</string>
     <string name="blip_glow">СВЕЧЕНИЕ</string>
     <string name="toggle_on">ВКЛ</string>
     <string name="toggle_off">ВЫКЛ</string>

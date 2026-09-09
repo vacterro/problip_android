@@ -13,6 +13,7 @@ import com.vacster.problip.core.IntervalMode
 import com.vacster.problip.core.ProblipState
 import com.vacster.problip.service.ProblipService
 import com.vacster.problip.service.ProblipSession
+import com.vacster.problip.settings.BlipCounterMode
 import com.vacster.problip.settings.SettingsRepository
 import com.vacster.problip.stats.BlipStats
 import com.vacster.problip.stats.BlipStatsRecord
@@ -86,6 +87,11 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setShowBlipCounter(show: Boolean) {
         viewModelScope.launch { settingsRepo.setShowBlipCounter(show) }
+    }
+
+    /** Display-only: never touches statistics recording. */
+    fun setBlipCounterMode(mode: BlipCounterMode) {
+        viewModelScope.launch { settingsRepo.setBlipCounterMode(mode) }
     }
 
     fun setBlipGlowEnabled(enabled: Boolean) {

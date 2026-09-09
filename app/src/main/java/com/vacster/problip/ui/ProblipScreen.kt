@@ -78,6 +78,7 @@ import com.vacster.problip.core.IntervalMode
 import com.vacster.problip.core.PremiumInterval
 import com.vacster.problip.core.ProblipState
 import com.vacster.problip.service.ProblipSession
+import com.vacster.problip.settings.BlipCounterMode
 import com.vacster.problip.trial.TrialAccess
 import com.vacster.problip.ui.theme.LocalProblipColors
 import com.vacster.problip.ui.theme.readableOn
@@ -331,18 +332,34 @@ fun ProblipScreen(
                 }
             }
 
-            // One compact counter line under the header; hidden by the user
-            // preference, never a second screen, never a scroll. Recording and
-            // the 100K reward run whether or not this is visible.
-            if (settings.showBlipCounter) {
-                Text(
-                    text = stringResource(R.string.blips_format, formatBlipCount(statsRecord.totalCount)),
-                    color = P.TextDim,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp,
-                    maxLines = 1,
-                )
+            // The counter presentation area: OFF renders nothing, TOTAL keeps
+            // the one-line legacy total, STATS shows the four-period strip.
+            // Recording and the 100K reward run regardless of the mode, and
+            // the strip recomputes at midnight without a new blip.
+            when (settings.blipCounterMode) {
+                BlipCounterMode.OFF -> Unit
+                BlipCounterMode.TOTAL ->
+                    Text(
+                        text = stringResource(R.string.blips_format, formatBlipCount(statsRecord.totalCount)),
+                        color = P.TextDim,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        maxLines = 1,
+                    )
+                BlipCounterMode.STATS -> {
+                    val midnightBump = rememberMidnightBump()
+                    val stats = remember(statsRecord, midnightBump) { viewModel.currentStats() }
+                    MainStatsStrip(
+                        stats =
+                            MainStatsValues(
+                                today = stats.todayCount,
+                                week = stats.weekCount,
+                                month = stats.monthCount,
+                                total = stats.totalCount,
+                            )
+                    )
+                }
             }
 
             // This weighted body is measured AFTER the header and action area. Long

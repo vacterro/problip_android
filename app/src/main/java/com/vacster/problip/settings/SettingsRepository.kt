@@ -45,10 +45,16 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val manualFromSeconds: Int = ManualInterval.DEFAULT_FROM_SECONDS,
         val manualToSeconds: Int = ManualInterval.DEFAULT_TO_SECONDS,
         /**
-         * Slow Main-screen visibility preference for the blip counter. It never
-         * touches recording: the count is kept even while hidden.
+         * Slow Main-screen visibility preference for the blip counter, kept
+         * read-only for legacy migration into [blipCounterMode]. It never
+         * touched recording: the count is kept even while hidden.
          */
         val showBlipCounter: Boolean = true,
+        /**
+         * Main-screen counter presentation. Legacy [showBlipCounter] migrates
+         * once on read: false -> OFF, true/absent -> TOTAL.
+         */
+        val blipCounterMode: BlipCounterMode = BlipCounterMode.TOTAL,
         /**
          * Slow preference for the premium Blip Glow effect. ON means "show the
          * effect when access permits" — it grants nothing by itself.
@@ -83,6 +89,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                 manualFromSeconds = manual.first,
                 manualToSeconds = manual.second,
                 showBlipCounter = p[SHOW_COUNTER] ?: true,
+                blipCounterMode = counterMode(p),
                 blipGlowEnabled = p[BLIP_GLOW] ?: true,
             )
         }
@@ -143,6 +150,14 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { it[SHOW_COUNTER] = show }
     }
 
+    /**
+     * Persist the Main counter presentation mode. The legacy boolean is left
+     * untouched (it only migrates on read) and new writes go to the mode key.
+     */
+    suspend fun setBlipCounterMode(mode: BlipCounterMode) {
+        dataStore.edit { it[COUNTER_MODE] = mode.name }
+    }
+
     /** Blip Glow preference; access is decided elsewhere, never here. */
     suspend fun setBlipGlowEnabled(enabled: Boolean) {
         dataStore.edit { it[BLIP_GLOW] = enabled }
@@ -166,6 +181,15 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         p[MANUAL_FROM] ?: ManualInterval.DEFAULT_FROM_SECONDS,
         p[MANUAL_TO] ?: ManualInterval.DEFAULT_TO_SECONDS,
     )
+
+    /**
+     * Legacy migration: a valid mode key wins; otherwise the old
+     * show_blip_counter boolean maps false -> OFF, true/absent -> TOTAL.
+     */
+    private fun counterMode(p: Preferences): BlipCounterMode =
+        p[COUNTER_MODE]?.let { stored ->
+            BlipCounterMode.entries.firstOrNull { it.name == stored }
+        } ?: if (p[SHOW_COUNTER] == false) BlipCounterMode.OFF else BlipCounterMode.TOTAL
 
     private fun parseTrials(csv: String?): Map<String, Long> {
         if (csv.isNullOrBlank()) return emptyMap()
@@ -207,6 +231,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         private val LEGACY_SOUND = stringPreferencesKey("sound")
         private val SHOW_COUNTER = booleanPreferencesKey("show_blip_counter")
         private val BLIP_GLOW = booleanPreferencesKey("blip_glow_enabled")
+        private val COUNTER_MODE = stringPreferencesKey("blip_counter_mode")
 
         fun fromContext(context: Context): SettingsRepository =
             SettingsRepository(context.problipDataStore)

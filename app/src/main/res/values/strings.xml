@@ -77,6 +77,16 @@
     <string name="premium_reward_earned">PREMIUM REWARD  EARNED</string>
     <string name="visual_section">VISUAL</string>
     <string name="show_blip_counter">SHOW BLIP COUNTER</string>
+    <string name="blip_counter_mode">BLIP COUNTER</string>
+    <string name="counter_mode_off">OFF</string>
+    <string name="counter_mode_total">TOTAL</string>
+    <string name="counter_mode_stats">STATS</string>
+    <string name="stats_short_today">TODAY</string>
+    <string name="stats_short_week">WEEK</string>
+    <string name="stats_short_month">MONTH</string>
+    <string name="stats_short_total">TOTAL</string>
+    <string name="stats_strip_a11y">Today: %1$s. This week: %2$s. This month: %3$s. Total: %4$s.</string>
+    <string name="premium_label">PREMIUM</string>
     <string name="blip_glow">BLIP GLOW</string>
     <string name="toggle_on">ON</string>
     <string name="toggle_off">OFF</string>
