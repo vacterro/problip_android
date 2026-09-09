@@ -1,7 +1,7 @@
 {
-  "content_xor": "7b6029ef056f75a7a122e04feb757a46",
-  "inventory_xor": "f9b2b8588288a50ebcfc8de387e94f18",
-  "lineage_hash": "77dbbe795649b8a528ab4e59acc36a8673089467ecc97be440eaf8d08d9edcf6",
+  "content_xor": "b37fd7f992b30178d44116c6cbbceb6e",
+  "inventory_xor": "e8e561bcb2edb8ac8625487a2865b617",
+  "lineage_hash": "1b0a0d9885d5e1a46a46648a288fa3995df5c0f3a71e482ad1c55b63db6ff9fb",
   "members": [
     [
       "2026-09-04T19_36_43.308658Z_receipt-801ad4efd951_core_FAIL.json",
@@ -86,9 +86,201 @@
     [
       "2026-09-04T23_12_42.731830Z_receipt-c2716dce772a_core_PASS.json",
       "60ec3b41355c5b50a94bcd24f3ff6a72"
+    ],
+    [
+      "2026-09-05T01_55_45.220029Z_receipt-e48b13ed4b6b_core_FAIL.json",
+      "1086e84e9da8ccc5f0df944acd8769cf"
+    ],
+    [
+      "2026-09-05T01_58_42.918938Z_receipt-35b2eda81a98_core_PASS.json",
+      "5b096d15d25836c499ccb66a2659943c"
+    ],
+    [
+      "2026-09-05T01_59_20.579776Z_receipt-e4deeca0ad6e_core_PASS.json",
+      "28d4181fa2b9a55387dac8211062ce7c"
+    ],
+    [
+      "2026-09-05T10_28_34.721188Z_receipt-a370fd88863a_core_FAIL.json",
+      "2f93ffb6719cda051214079daebd05d0"
+    ],
+    [
+      "2026-09-05T10_30_43.719241Z_receipt-ebcf8a7cdca6_core_FAIL.json",
+      "e08f1d82ee6e897c6c3d13986142a1ba"
+    ],
+    [
+      "2026-09-05T10_33_19.958249Z_receipt-c83030d1ee3e_core_FAIL.json",
+      "5d7566ad29556e1e2305ebadf5b47d52"
+    ],
+    [
+      "2026-09-05T10_57_47.400097Z_receipt-ded1dc4dbd09_core_FAIL.json",
+      "a373c81b0a424015acd3feddd9aa7a45"
+    ],
+    [
+      "2026-09-05T10_59_58.820460Z_receipt-f9b075343435_core_PASS.json",
+      "e85d023f6fbaaf0444e7675fc8474d52"
+    ],
+    [
+      "2026-09-05T14_37_14.048222Z_receipt-f10358582fa8_core_PASS.json",
+      "b40d5f7ef88aab8e858093f426f1be9c"
+    ],
+    [
+      "2026-09-05T14_49_22.566871Z_receipt-120369c68b56_core_PASS.json",
+      "0f307e619bc0741e2ae9957d3dc6b4fb"
+    ],
+    [
+      "2026-09-05T15_04_47.832493Z_receipt-327e8fc0f818_core_FAIL.json",
+      "a30d8ad05c59ea39139e5db9e1ced025"
+    ],
+    [
+      "2026-09-05T15_04_57.242457Z_receipt-2b8c9b1acba8_core_PASS.json",
+      "cbf6f7c8c262fbbf798dab86b89f05e8"
+    ],
+    [
+      "2026-09-05T17_54_57.208144Z_receipt-29d8931b4a68_core_FAIL.json",
+      "0b9ecd939f9cf6b4d16aced13e89dea4"
+    ],
+    [
+      "2026-09-05T17_55_18.817284Z_receipt-d5619c391dda_core_FAIL.json",
+      "7c060677b2ae8216e08abb46ebcca6a7"
+    ],
+    [
+      "2026-09-05T17_55_48.631666Z_receipt-791690f02c6a_core_FAIL.json",
+      "0fe4f091b3cef33d59356c7c11b2281b"
+    ],
+    [
+      "2026-09-05T17_56_45.010582Z_receipt-f9d95fa8538e_core_FAIL.json",
+      "f52a752d12c4f4842fa12194b3cc89e0"
+    ],
+    [
+      "2026-09-05T17_59_09.015678Z_receipt-06eb5995d14b_core_FAIL.json",
+      "ee210bf90efa964bafd9076a175170ef"
+    ],
+    [
+      "2026-09-08T03_44_33.964597Z_receipt-b1dcf431ac93_core_FAIL.json",
+      "934dcec09dabc3a2fa380277f14e8768"
+    ],
+    [
+      "2026-09-08T03_44_46.486412Z_receipt-d44fb169a244_core_FAIL.json",
+      "3634615ef67d4730929728a95d24be7d"
+    ],
+    [
+      "2026-09-08T03_50_09.025997Z_receipt-d9a95c52ab9d_core_FAIL.json",
+      "f20a64d2686004d6a7654cf61803abb7"
+    ],
+    [
+      "2026-09-08T03_50_19.783436Z_receipt-265c847a0ef2_core_FAIL.json",
+      "71fea763177050a0ae7e6b8bf9a0ede0"
+    ],
+    [
+      "2026-09-08T17_11_30.380515Z_receipt-c5d349262680_core_FAIL.json",
+      "1c8f8d9cdb7de71f38a07e12ed73c838"
+    ],
+    [
+      "2026-09-08T17_22_55.453419Z_receipt-8fcf370af271_core_FAIL.json",
+      "d591230d4fe38b828dde3b5e3448a1d6"
+    ],
+    [
+      "2026-09-08T17_39_18.782459Z_receipt-38367335c772_core_FAIL.json",
+      "244344aa5c1e22343b2f7d95b479460f"
+    ],
+    [
+      "2026-09-08T17_47_37.247974Z_receipt-ee38eed2fe78_core_FAIL.json",
+      "c1640c422e65504756149aeb454334a0"
+    ],
+    [
+      "2026-09-08T17_50_25.094927Z_receipt-cea10adb8078_core_FAIL.json",
+      "b775e6cfdaab568bb824e31d38eae61f"
+    ],
+    [
+      "2026-09-08T17_50_36.039395Z_receipt-72972ff2645e_core_FAIL.json",
+      "db709cc1c548df80152d5f4da94c418d"
+    ],
+    [
+      "2026-09-08T17_52_11.187328Z_receipt-2a79889e858d_core_FAIL.json",
+      "d2d06011e93e6a272172cbd5fe42f217"
+    ],
+    [
+      "2026-09-08T17_53_46.959380Z_receipt-daf39bb73588_core_PASS.json",
+      "35fea2cf48e400da4c145eecc9cbe902"
+    ],
+    [
+      "2026-09-08T17_54_58.491630Z_receipt-e50f72ab2118_core_PASS.json",
+      "0a66b77e439f702016145f60b34024ce"
+    ],
+    [
+      "2026-09-08T17_56_29.149180Z_receipt-cea8986e8ad4_core_FAIL.json",
+      "28d809f223bc6a5647cf0ce32584ee28"
+    ],
+    [
+      "2026-09-08T17_56_46.879276Z_receipt-d72d2e0d696f_core_FAIL.json",
+      "46d4f1ac03f27dbce925c592c2684d8f"
+    ],
+    [
+      "2026-09-08T17_57_34.948804Z_receipt-999c949c2dbc_core_PASS.json",
+      "eb516d0d0965a3db9e75c9bc396899b4"
+    ],
+    [
+      "2026-09-08T17_58_05.753211Z_receipt-9e632b4b770e_core_PASS.json",
+      "e2f2d0745efaea646aa9b90552527205"
+    ],
+    [
+      "2026-09-08T19_29_27.691059Z_receipt-c88f663f3739_core_PASS.json",
+      "6d062fc26875f3be83388687a86fca29"
+    ],
+    [
+      "2026-09-08T19_29_39.501642Z_receipt-f0fdd83ae651_core_PASS.json",
+      "7f8467bc59ecc6e6255de6b635f5a175"
+    ],
+    [
+      "2026-09-08T23_02_02.262042Z_receipt-bef3358dc264_core_FAIL.json",
+      "85a7f39c13c84aa77767255678b639cb"
+    ],
+    [
+      "2026-09-08T23_03_21.370662Z_receipt-112d4f66c7b3_core_FAIL.json",
+      "1b279a621b7f93c1991abec5cf105432"
+    ],
+    [
+      "2026-09-08T23_03_34.496458Z_receipt-c340e584041c_core_FAIL.json",
+      "5bb77b859dbbb5d0ae99e6a02ada50a3"
+    ],
+    [
+      "2026-09-08T23_04_25.341404Z_receipt-7aca342491cd_core_FAIL.json",
+      "407a0ca8003e0a218043487eb2c47d97"
+    ],
+    [
+      "2026-09-08T23_06_04.439924Z_receipt-0cd6ac37b675_core_PASS.json",
+      "9cb030c98a0c30c7feb78cddfc9d2877"
+    ],
+    [
+      "2026-09-08T23_10_32.683307Z_receipt-eaed8c7b58da_core_PASS.json",
+      "0e2cc41388ab4d2176e0b567903e4112"
+    ],
+    [
+      "2026-09-08T23_11_57.649994Z_receipt-5cc1281e0d34_core_PASS.json",
+      "3fb8f5288461112d02474829a54aab7d"
+    ],
+    [
+      "2026-09-08T23_16_07.262120Z_receipt-acac7238a19b_core_PASS.json",
+      "d281d68c271f2310381bf79845554748"
+    ],
+    [
+      "2026-09-08T23_19_45.356588Z_receipt-32809c26c63f_core_PASS.json",
+      "8f67c976005f1736d224baaebb7cbf87"
+    ],
+    [
+      "2026-09-08T23_20_20.960156Z_receipt-8d1081205839_core_PASS.json",
+      "d5fc3b22ea272364c99bc378a5deb484"
+    ],
+    [
+      "2026-09-08T23_20_41.817220Z_receipt-ac02965c08ce_core_PASS.json",
+      "4517d5c80dd99645f4607f9235770b95"
+    ],
+    [
+      "2026-09-08T23_21_01.481518Z_receipt-c03885ea6794_core_PASS.json",
+      "d90252d94cfe6f370dcf00623be5203e"
     ]
   ],
-  "receipt_count": 21,
-  "receipt_dir_mtime_ns": 1788563562865330400,
+  "receipt_count": 69,
+  "receipt_dir_mtime_ns": 1788909661606232100,
   "version": 1
 }
