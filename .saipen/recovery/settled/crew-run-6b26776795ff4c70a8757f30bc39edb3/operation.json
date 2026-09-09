@@ -1,0 +1,52 @@
+{
+  "op_id": "crew-run-6b26776795ff4c70a8757f30bc39edb3",
+  "operation": "crew_run",
+  "created_at": "2026-09-09T01:43:12Z",
+  "agent": "codebuff",
+  "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+  "project_lineage": "lineage-ababa531be8d45d18b3e0c23adb738a9",
+  "semantic_payload_hash": "1e5f3b719f0e2435",
+  "preconditions": {
+    ".saipen/STATE.md": "d186e7033d89ec9a",
+    ".saipen/LOG.md": "860672c40da8585d"
+  },
+  "read_preconditions": {
+    ".saipen/BOARD.md": "c93027a779752ab5",
+    ".saipen/logs": "delete-tree-sha256:14cf9ab05bfbbf27473ee86c2b95367788622dffac6aa57657057898deb53c99"
+  },
+  "verification_policy": "core_fast",
+  "status": "COMMITTED",
+  "progress_index": 2,
+  "targets": [
+    {
+      "path": ".saipen/LOG.md",
+      "role": "log",
+      "action": "write",
+      "before_hash": "860672c40da8585d",
+      "after_hash": "fb1cff58e997e75e",
+      "applied": true
+    },
+    {
+      "path": ".saipen/STATE.md",
+      "role": "state",
+      "action": "write",
+      "before_hash": "d186e7033d89ec9a",
+      "after_hash": "6e673fc818a85a87",
+      "applied": true
+    }
+  ],
+  "receipt_metadata": {
+    "operation": "crew_run",
+    "status": "COMMITTED",
+    "crew_epoch": "converge_intent-3b63aa76a3884de0aef0375165802a35",
+    "role": "saitest",
+    "source_head": "fb407b54ac81bbbb7711fa7a954f567ebbf022a4",
+    "source_tree_fingerprint": "git-delta-v1:3bf38be36accb8c9ffa04733e62aa313e414325826a8508734cbadcd93202652",
+    "role_revision": "sha256:801fbfdc4be680d87b18cd21e6246d83fad5b474ebd7fe82efa83918cecf2f08",
+    "package_identities": [
+      "sha256:6ce901de7a945ab19b6eebe085266c05343792ee1ba1a6f591ed76ec3ae1f258"
+    ],
+    "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+    "event_id": "E-116"
+  }
+}

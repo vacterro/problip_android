@@ -1,0 +1,46 @@
+{
+  "op_id": "claim-bef4a3d5262847adb0210dacb97ff037",
+  "operation": "claim",
+  "created_at": "2026-09-08T01:02:10Z",
+  "agent": "opencode",
+  "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+  "project_lineage": "lineage-ababa531be8d45d18b3e0c23adb738a9",
+  "semantic_payload_hash": "50352e35921623d0",
+  "preconditions": {
+    ".saipen/STATE.md": "9f408e0cade60060",
+    ".saipen/BOARD.md": "11a1b9bca53aae4f",
+    ".saipen/LOG.md": "c32230973798912a"
+  },
+  "read_preconditions": {
+    ".saipen/logs": "tree-missing-v1"
+  },
+  "verification_policy": "core_fast",
+  "status": "COMMITTED",
+  "progress_index": 3,
+  "targets": [
+    {
+      "path": ".saipen/LOG.md",
+      "role": "log",
+      "action": "write",
+      "before_hash": "c32230973798912a",
+      "after_hash": "dc47bd6561002527",
+      "applied": true
+    },
+    {
+      "path": ".saipen/BOARD.md",
+      "role": "board",
+      "action": "write",
+      "before_hash": "11a1b9bca53aae4f",
+      "after_hash": "47e817c352092a6e",
+      "applied": true
+    },
+    {
+      "path": ".saipen/STATE.md",
+      "role": "state",
+      "action": "write",
+      "before_hash": "9f408e0cade60060",
+      "after_hash": "8321ea4cab7b346c",
+      "applied": true
+    }
+  ]
+}

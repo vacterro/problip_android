@@ -1,0 +1,58 @@
+{
+  "op_id": "sub-disposition-b4f8db02",
+  "operation": "sub_disposition",
+  "created_at": "2026-09-09T02:50:41Z",
+  "agent": "saipython",
+  "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+  "project_lineage": "lineage-ababa531be8d45d18b3e0c23adb738a9",
+  "semantic_payload_hash": "04772c90f1b27905",
+  "preconditions": {
+    ".saipen/LOG.md": "3a7c35d9fb46542a",
+    ".saipen/STATE.md": "cfd6f898319140e7",
+    ".saipen/extensions/subs/saitest/kitchen/OUTBOX.md": "522f99e8ba50e791"
+  },
+  "read_preconditions": {
+    ".": "source-identity-v1:53f0de41cf2a9f78dcddafc61c1c4bf52a33b5b1e1d2c3eb8ad5da42b58cf76a",
+    ".saipen/BOARD.md": "cf25db1297dfd2d7",
+    ".saipen/logs/LOG-001.md": "d2a7535e354252c0"
+  },
+  "verification_policy": "sub_disposition",
+  "status": "COMMITTED",
+  "progress_index": 3,
+  "targets": [
+    {
+      "path": ".saipen/LOG.md",
+      "role": "log",
+      "action": "write",
+      "before_hash": "3a7c35d9fb46542a",
+      "after_hash": "0edf173e222abbc6",
+      "applied": true
+    },
+    {
+      "path": ".saipen/STATE.md",
+      "role": "state",
+      "action": "write",
+      "before_hash": "cfd6f898319140e7",
+      "after_hash": "54292478d71da568",
+      "applied": true
+    },
+    {
+      "path": ".saipen/extensions/subs/saitest/kitchen/OUTBOX.md",
+      "role": "report",
+      "action": "write",
+      "before_hash": "522f99e8ba50e791",
+      "after_hash": "f64e945fe2190ac2",
+      "applied": true
+    }
+  ],
+  "receipt_metadata": {
+    "operation": "sub_disposition",
+    "status": "COMMITTED",
+    "package_identity": "sha256:8418b55ba0f0ce4d074763d38a06b4e96d976a9f8a3cebbe7a6f9553b9a3ad26",
+    "producer": "saitest",
+    "package": "W-003",
+    "ticket_id": "T-39",
+    "source_head": "db774a46bed169e96ef0afe5487240524bb96566",
+    "source_tree_fingerprint": "git-delta-v1:3bf38be36accb8c9ffa04733e62aa313e414325826a8508734cbadcd93202652"
+  }
+}

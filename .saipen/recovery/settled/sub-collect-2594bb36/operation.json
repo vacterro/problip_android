@@ -1,0 +1,71 @@
+{
+  "op_id": "sub-collect-2594bb36",
+  "operation": "sub_collect",
+  "created_at": "2026-09-09T02:31:05Z",
+  "agent": "saipython",
+  "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+  "project_lineage": "lineage-ababa531be8d45d18b3e0c23adb738a9",
+  "semantic_payload_hash": "289757fa96979ed4",
+  "preconditions": {
+    ".saipen/LOG.md": "1ea321a629834568",
+    ".saipen/BOARD.md": "acf93dd573a704c3",
+    ".saipen/STATE.md": "ca852886d91e599a",
+    ".saipen/extensions/subs/MANIFEST.md": "daa712e3ebf0abe1"
+  },
+  "read_preconditions": {
+    ".": "source-identity-v1:53414c4fb7484e327943fb25c6813cd73c1522580ff9f82fd77ddb191ab4d69e",
+    ".saipen/logs/LOG-001.md": "d2a7535e354252c0",
+    "V:/___VAC/__K/__CODE/_ANDROID/ProBlipAndroid/.saipen/extensions/subs/saihunt.md": "60558e6d7590fab8",
+    ".saipen/extensions/subs/saihunt/kitchen/OUTBOX.md": "20ab60e4c8f9c97e"
+  },
+  "verification_policy": "sub_collect",
+  "status": "COMMITTED",
+  "progress_index": 4,
+  "targets": [
+    {
+      "path": ".saipen/LOG.md",
+      "role": "log",
+      "action": "write",
+      "before_hash": "1ea321a629834568",
+      "after_hash": "97338da7fb89273a",
+      "applied": true
+    },
+    {
+      "path": ".saipen/BOARD.md",
+      "role": "board",
+      "action": "write",
+      "before_hash": "acf93dd573a704c3",
+      "after_hash": "28de8df0f6d7d470",
+      "applied": true
+    },
+    {
+      "path": ".saipen/STATE.md",
+      "role": "state",
+      "action": "write",
+      "before_hash": "ca852886d91e599a",
+      "after_hash": "74605922438b2810",
+      "applied": true
+    },
+    {
+      "path": ".saipen/extensions/subs/MANIFEST.md",
+      "role": "manifest",
+      "action": "write",
+      "before_hash": "daa712e3ebf0abe1",
+      "after_hash": "df7a5258079c7986",
+      "applied": true
+    }
+  ],
+  "receipt_metadata": {
+    "operation": "sub_collect",
+    "status": "COMMITTED",
+    "package_identities": [
+      "sha256:b3fa7e4f26b6d1cdd36d962c1ac4933aa4c0043e7e7f587e8b9dfd5703798058"
+    ],
+    "producers": [
+      "saihunt"
+    ],
+    "tickets": [
+      "T-35"
+    ]
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "op_id": "source.requirement_add-6c13a337ec5c478a8aaeb5f3021ad09b",
+  "operation": "source.requirement_add",
+  "created_at": "2026-09-05T10:27:16Z",
+  "agent": "opencode",
+  "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+  "project_lineage": "lineage-ababa531be8d45d18b3e0c23adb738a9",
+  "semantic_payload_hash": "2256bf2e065a50cb",
+  "preconditions": {
+    ".saipen/intake/contracts/SRC-001.json": "a8465c49a836b202",
+    ".saipen/intake/contracts/SRC-001.r037.json": "",
+    ".saipen/intake/coverage/SRC-001.json": "4dd456c6992556f2"
+  },
+  "read_preconditions": {},
+  "verification_policy": "core_fast",
+  "status": "COMMITTED",
+  "progress_index": 3,
+  "targets": [
+    {
+      "path": ".saipen/intake/contracts/SRC-001.json",
+      "role": "contract",
+      "action": "write",
+      "before_hash": "a8465c49a836b202",
+      "after_hash": "27cfffb49f4c43e2",
+      "applied": true
+    },
+    {
+      "path": ".saipen/intake/contracts/SRC-001.r037.json",
+      "role": "contract_revision",
+      "action": "write",
+      "before_hash": "",
+      "after_hash": "27cfffb49f4c43e2",
+      "applied": true
+    },
+    {
+      "path": ".saipen/intake/coverage/SRC-001.json",
+      "role": "coverage",
+      "action": "write",
+      "before_hash": "4dd456c6992556f2",
+      "after_hash": "b2144327d165326a",
+      "applied": true
+    }
+  ]
+}

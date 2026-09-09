@@ -1,0 +1,38 @@
+{
+  "op_id": "checkpoint-1aa02ac2063246459cc6f445a4c89cd9",
+  "operation": "checkpoint",
+  "created_at": "2026-09-08T17:57:51Z",
+  "agent": "opencode",
+  "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+  "project_lineage": "lineage-ababa531be8d45d18b3e0c23adb738a9",
+  "semantic_payload_hash": "c1288400c8a50c26",
+  "preconditions": {
+    ".saipen/STATE.md": "dc4a7480c5f2b198",
+    ".saipen/LOG.md": "183a9b4ee3799854"
+  },
+  "read_preconditions": {
+    ".saipen/BOARD.md": "2f328661830b2e90",
+    ".saipen/logs": "tree-missing-v1"
+  },
+  "verification_policy": "core_fast",
+  "status": "COMMITTED",
+  "progress_index": 2,
+  "targets": [
+    {
+      "path": ".saipen/LOG.md",
+      "role": "log",
+      "action": "write",
+      "before_hash": "183a9b4ee3799854",
+      "after_hash": "893eccb11ef8ac36",
+      "applied": true
+    },
+    {
+      "path": ".saipen/STATE.md",
+      "role": "state",
+      "action": "write",
+      "before_hash": "dc4a7480c5f2b198",
+      "after_hash": "20b828efe7dae559",
+      "applied": true
+    }
+  ]
+}
