@@ -11,6 +11,9 @@ desktop.ini
 Thumbs.db
 .DS_Store
 *.apk
+# Unsigned repository-verification bundle (docs/release-checklist.md); never an
+# upload artifact - Play gets the signed AAB built at release time.
+*.aab
 
 # Release signing material must never enter Git (docs/release-signing.md).
 keystore.properties
