@@ -30,6 +30,7 @@ import com.vacster.problip.withAppLocale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.SharingStarted
@@ -38,6 +39,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * User-started foreground service owning the active session: one scheduler,
@@ -185,10 +187,16 @@ class ProblipService : Service() {
 
     /** User STOP, from the app button or the notification action. */
     private fun stopSession() = onMain {
+        val sched = scheduler
+        if (sched == null) {
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            stopSelf(lastStartId)
+            return@onMain
+        }
+        val capturedAudio = audio
         lifecycle.stop()
         applyWakeLock()
-        flushStats()
-        releaseSession()
+        beginTeardown(sched, capturedAudio)
     }
 
     /**
@@ -197,17 +205,58 @@ class ProblipService : Service() {
      * started; the accepted case keeps ERROR visible past teardown.
      */
     private fun failSession(token: Int, message: String) = onMain {
-        if (lifecycle.fail(token, message)) {
-            applyWakeLock()
-            flushStats()
-            releaseSession()
+        if (!lifecycle.fail(token, message)) return@onMain
+        applyWakeLock()
+        val sched = scheduler ?: return@onMain
+        beginTeardown(sched, audio)
+    }
+
+    /**
+     * CORE-001 teardown: detach the engine synchronously (so a START landing while
+     * the boundary settles installs a genuinely new session instead of no-op'ing on
+     * the dying one), then — off the main thread — await scheduler quiescence, await
+     * the final catch-up stats flush, and finally release the captured engine and
+     * the session shell. The release runs under [NonCancellable] so a service
+     * destroy mid-teardown cannot strand the audio engine or leave the notification.
+     */
+    private fun beginTeardown(sched: BlipScheduler, capturedAudio: SoundPoolAudioPlayer?) {
+        scheduler = null
+        audio = null
+        preparedPool = emptySet()
+        sessionJobs.forEach { it.cancel() }
+        sessionJobs.clear()
+        val stats = ProblipApp.stats(this)
+        scope.launch {
+            try {
+                sched.stopAndAwaitQuiescence()
+                stats.flushAndAwait()
+            } finally {
+                withContext(NonCancellable + Dispatchers.Main) {
+                    releaseSession(sched, capturedAudio)
+                }
+            }
         }
     }
 
     /**
-     * Normal teardown flushes pending counts to disk so the last blips of a
-     * session usually survive. Best-effort: audio and lifecycle state stay
-     * untouched by anything the stats store does.
+     * Quiescence has settled and the engine is idle. Releases the captured engine
+     * unconditionally; the session shell (notification + stopSelf) is released only
+     * if no newer session has taken over — otherwise this teardown would kill the
+     * session the user just (re)started. A repeated/overlapping STOP that already
+     * reached here is idempotent: the shell checks are null-safe no-ops.
+     */
+    private fun releaseSession(sched: BlipScheduler, capturedAudio: SoundPoolAudioPlayer?) {
+        capturedAudio?.release()
+        if (scheduler != null) return
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        stopSelf(lastStartId)
+    }
+
+    /**
+     * Last-resort teardown flush for system-initiated [onDestroy], where no
+     * coroutine can be awaited. Best-effort: audio and lifecycle state stay
+     * untouched by anything the stats store does. Normal STOP/FAIL teardown
+     * instead goes through the awaitable [beginTeardown] boundary.
      */
     private fun flushStats() {
         try {

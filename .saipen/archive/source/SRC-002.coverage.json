@@ -1,0 +1,68 @@
+{
+  "requirements": {
+    "SRC-002:R0001": {
+      "class": "requirement",
+      "text": "Implement successful-blip Today/Week/Month/Total statistics in separate Preferences DataStore with immediate in-memory updates, bounded asynchronous persistence, Clock/ZoneId calendar semantics, sanitization, and authoritative successful-playback-only counting.",
+      "actionable": true,
+      "disposition": "IMPLEMENTED",
+      "work": "T-27",
+      "evidence": "app/src/main/java/com/vacster/problip/stats/BlipStats.kt + BlipStatsRepository.kt (own Preferences DataStore problip_stats, immediate in-memory StateFlow increment, bounded 1000 ms batching, immediate persist on 100K crossing, flush on STOP/teardown, Clock/ZoneId java.time periods, sanitize); hardening: one-shot load in start() with memory authoritative (no data.data feedback, delayed-write race closed); counting boundary in service/BlipPlaybackHook.kt (succeeded audio.play() only)",
+      "verification": "E-79 implementation, E-84 hardening; BlipStatsTest 22 + BlipStatsRepositoryTest 12 green in E-85 full gate 248/0/30; negative control: reintroduced dataStore.data feedback -> BlipStatsRepositoryTest 2 FAILED, restored -> green"
+    },
+    "SRC-002:R0002": {
+      "class": "requirement",
+      "text": "At 100_000 successful blips persist irreversible earnedPremium, integrate it as a distinct global PremiumAccess source including cold START correctness, never mutate Play ownership, never clear it with temporary access reset.",
+      "actionable": true,
+      "disposition": "IMPLEMENTED",
+      "work": "T-27",
+      "evidence": "PREMIUM_REWARD_BLIPS=100_000L irreversible latch in BlipStatsLogic.afterBlip/sanitize; PremiumAccess.earnedPremium distinct global source (grantedIds=ALL_IDS, grantsBlipGlow); TrialCoordinator recomputes the one authority; resetTemporaryAccess and Billing ownership untouched; hardening: sanitize self-heals earnedPremium from total >= threshold",
+      "verification": "E-79, E-84; BlipStatsTest threshold/self-heal pins, TrialCoordinatorTest, PremiumAccessTest, ColdStartTest all green in E-85; hardening negative control: ordinary +1 -> 6 Long.MAX exact tests FAILED, restored -> green"
+    },
+    "SRC-002:R0003": {
+      "class": "requirement",
+      "text": "Add default-on showBlipCounter setting affecting only Main visibility; recording and reward remain active while hidden; Settings shows localized Today, This Week, This Month, Total, reward progress or EARNED.",
+      "actionable": true,
+      "disposition": "IMPLEMENTED",
+      "work": "T-27",
+      "evidence": "SettingsRepository.showBlipCounter default true (Main visibility only); Settings STATISTICS section shows localized TODAY/THIS WEEK/THIS MONTH/TOTAL + PREMIUM REWARD progress or EARNED; Main BLIPS line gated by the preference, no-scroll preserved",
+      "verification": "E-79 + E-85 full gate green; hidden counter keeps recording per SettingsRepository key set (no recording path reads the preference); four-locale BLIPS-row fit stays PHYSICAL on T-014"
+    },
+    "SRC-002:R0004": {
+      "class": "requirement",
+      "text": "Add feature_blip_glow to reusable five-minute trial machinery, default-on preference, theme_pack/developer/earned access, EARNED label semantics, and successful ProblipSession.blips-driven Main accent glow without replay or scheduler effects.",
+      "actionable": true,
+      "disposition": "IMPLEMENTED",
+      "work": "T-27",
+      "evidence": "TrialAccess.FEATURE_BLIP_GLOW in ALL_IDS; SettingsRepository.blipGlowEnabled default true; PremiumAccess.grantsBlipGlow(ownsPack) covers theme_pack/DEV/EARNED/trial; EARNED AccessLabelKind (OWNED > EARNED > DEV > TRIAL); BlipGlow.kt reuses ProblipSession.blips, 0.25f max alpha, 60/200 ms, RESUMED-only, no replay; hardening: toggle never starts a trial, separate TRY 5 MIN action (GlowUiPolicy), OFF keeps a running trial's timer and only suppresses the effect",
+      "verification": "E-79, E-84; GlowUiPolicyTest 4 + TrialLabelTest green in E-85; hardening negative control: trial start wired back into the OFF toggle -> GlowUiPolicyTest 2 FAILED, restored -> green"
+    },
+    "SRC-002:R0005": {
+      "class": "requirement",
+      "text": "Add EN/RU/ET/JA localized statistics, counter, earned, glow and Help text; locale-aware numeric formatting; preserve Main no-scroll layout and avoid additional screens/charts/resets.",
+      "actionable": true,
+      "disposition": "IMPLEMENTED",
+      "work": "T-27",
+      "evidence": "en/ru/et/ja strings for STATISTICS/VISUAL sections, reward, EARNED, BLIPS, help_statistics_body; ToggleRow now resolves R.string.toggle_on/toggle_off (existing keys) instead of hardcoded ON/OFF; CountFormat.kt reads the app Configuration locale via ConfigurationCompat (recomposes on locale change) instead of Locale.getDefault; no new screens/charts/resets",
+      "verification": "E-79 strings, E-84 hardening (toggle keys + count locale), E-85 full gate + dex scan confirms strings packaged; per-app locale formatting change is JVM-untestable (Configuration source), physical spot-check stays on T-014"
+    },
+    "SRC-002:R0006": {
+      "class": "acceptance-criterion",
+      "text": "Add deterministic required tests, demonstrate negative controls for threshold, successful-only hook and earned access gate, run gradlew test assembleDebug assembleRelease lint lintVitalRelease --no-daemon, export fresh root APKs, update README and SAIPEN memory, create one focused commit without push.",
+      "actionable": true,
+      "disposition": "IMPLEMENTED",
+      "work": "T-27",
+      "evidence": "BlipStatsTest 22, BlipStatsRepositoryTest 12, BlipPlaybackHookTest 3, GlowUiPolicyTest 4, MidnightRolloverTest 6, +ColdStartTest 1, +TrialCoordinatorTest 2; E-79 negative controls (threshold +50K -> 4 FAIL, hook if(true) -> 1 FAIL, earned gate removed -> 7 FAIL) and E-84 hardening controls (feedback -> 2 FAIL, ordinary +1 -> 6 FAIL, earned readiness removed -> 3 FAIL, trial-in-OFF-toggle -> 2 FAIL), all restored green; gradlew test assembleDebug assembleRelease lint lintVitalRelease PASS; fresh root APKs exported; README + SAIPEN memory updated; ONE commit created, not pushed",
+      "verification": "E-85 full gate: 248 unique tests 0 failures 30 suites, lint 0 errors 28 reviewed warnings; APKs Problip-0.1.0-debug.apk 12,316,439 B and Problip-0.1.0-release-UNSIGNED-not-installable.apk 9,038,537 B; commit hash in the T-27 final report (E-86)"
+    },
+    "SRC-002:R0007": {
+      "class": "invariant",
+      "text": "Supersede only SRC-001:R0038 prohibition on counters for this product-statistics counter; retain no trial cooldown, trial abuse counter, account, device ID, server validation or anti-abuse system.",
+      "actionable": true,
+      "disposition": "IMPLEMENTED",
+      "work": "T-27",
+      "evidence": "SUPERSESSION recorded in E-79 (LOG): only the SRC-001 'no counters' word is superseded for the PRODUCT statistics counter; TrialAccess untouched (no cooldown, no abuse counter), no account/device ID/server validation/anti-abuse added; the stats DataStore holds four counters + three period keys + one boolean only",
+      "verification": "E-79 supersession record + source inspection: stats package has no trial-usage semantics, trials remain repeatable five-minute windows; TrialAccessTest unchanged-green in E-85"
+    }
+  },
+  "schema_version": 1
+}

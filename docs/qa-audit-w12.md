@@ -85,3 +85,15 @@ Watch for, in this order of severity:
    should keep the SoundPool sample count flat.
 5. Timing drift or silence with the screen locked, in Doze and in Battery
    Saver, which is the input for the WakeLock decision.
+
+### T-58 — live calendar/timezone acceptance
+
+1. Launch Problip; keep its process alive.
+2. Open Main STATS or Settings statistics; note TODAY/WEEK/MONTH.
+3. Change the device timezone to one whose current local date differs.
+4. Return without killing Problip; verify TODAY/WEEK/MONTH recompute without a blip.
+5. Start or continue playback; verify the next successful blip enters the new local period.
+6. Restore the timezone.
+7. Manually adjust date/time; verify visible statistics and the next-midnight boundary refresh.
+
+This row remains physical-device evidence. JVM tests and builds do not mark it PASS.

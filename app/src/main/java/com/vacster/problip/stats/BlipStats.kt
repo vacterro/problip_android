@@ -1,7 +1,9 @@
 package com.vacster.problip.stats
 
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.IsoFields
 
@@ -37,6 +39,9 @@ data class PeriodKeys(
 
         fun of(clock: Clock): PeriodKeys = of(LocalDate.now(clock))
 
+        /** The current periods under a calendar authority read. */
+        fun of(now: CalendarNow): PeriodKeys = of(now.instant.atZone(now.zone).toLocalDate())
+
         fun of(date: LocalDate): PeriodKeys = PeriodKeys(
             day = date.format(DAY_FORMAT),
             week = weekKey(date),
@@ -49,6 +54,26 @@ data class PeriodKeys(
             date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR),
         )
     }
+}
+
+/**
+ * Calendar authority (CORE-002): the current instant and the CURRENT zone are
+ * read together every time current period keys are needed, so a timezone
+ * change while the process lives is honoured by the very next key resolution
+ * without recreating any component. Production resolves
+ * [ZoneId.systemDefault] dynamically; tests inject deterministic behaviour.
+ */
+fun interface CalendarAuthority {
+    /** The instant + zone the current [PeriodKeys] resolve against. */
+    fun now(): CalendarNow
+}
+
+/** One read of the calendar authority: a point in time on a zone. */
+data class CalendarNow(val instant: Instant, val zone: ZoneId)
+
+/** The production authority: real time, the live device zone, no caching. */
+fun systemCalendarAuthority(): CalendarAuthority = CalendarAuthority {
+    CalendarNow(Instant.now(), ZoneId.systemDefault())
 }
 
 /**

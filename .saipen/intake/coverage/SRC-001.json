@@ -1,0 +1,410 @@
+{
+  "requirements": {
+    "SRC-001:R1": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Ship exactly three features: five-minute trials for unowned premium sounds, five-minute trials for unowned premium themes, and one compact home-screen START/STOP widget.",
+      "verification": "TrialAccessTest 18 + WidgetStateTest 4 PASS in E-052",
+      "work": "T-020"
+    },
+    "SRC-001:R10": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "disposition": "VERIFIED",
+      "evidence": "E-058",
+      "text": "Pre-flight fix 3: effective theme selection falls back to Classic when the premium entitlement is unavailable.",
+      "verification": "ui/theme/Theme.kt:10-23 resolves through ThemeCatalog.effective; ThemeCatalogTest pins the fallback for unknown and retired ids",
+      "work": "T-022"
+    },
+    "SRC-001:R11": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "disposition": "VERIFIED",
+      "evidence": "E-045",
+      "text": "Pre-flight fix 4: a successful Billing refresh does not leave an obsolete previous store error.",
+      "verification": "BillingRepository.kt:160 and :203 clear the stale message with _error.compareAndSet before publishing",
+      "work": "T-019"
+    },
+    "SRC-001:R12": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "One small Android-independent trial model (TrialAccess, TrialClock, trial state) instead of a large architecture.",
+      "verification": "trial/TrialAccess.kt + TrialClock.kt + TrialCoordinator.kt are pure JVM and tested without Android",
+      "work": "T-020"
+    },
+    "SRC-001:R13": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Trial ids are the existing content ids; sound_original, theme_classic and theme_pack never get trial ids.",
+      "verification": "TrialAccessTest.trialableIdsAreExactlyThePremiumCatalog",
+      "work": "T-020"
+    },
+    "SRC-001:R14": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "SUPERSEDED",
+      "evidence": "E-057",
+      "text": "Premium theme trial ids are theme_terminal, theme_phosphor, theme_midnight, theme_amber and theme_pink.",
+      "verification": "audit/2.md replaced the five pre-release placeholders with the sixteen Wintage palettes, so the trialable theme ids are now theme_wintage_* (E-057, E-058)",
+      "work": "T-022"
+    },
+    "SRC-001:R15": {
+      "actionable": true,
+      "class": "invariant",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-055",
+      "text": "Ownership and trial access stay separate concepts; BillingRepository never believes trial items are owned.",
+      "verification": "trial/PremiumAccess.kt is the single effective-access authority (free || owned || activeTrial || developerAccess); PremiumAccessTest 10",
+      "work": "T-024"
+    },
+    "SRC-001:R16": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Trial expiry survives Activity recreation, process death and app restart, persisted as wall-clock epoch millis in the existing DataStore.",
+      "verification": "SettingsRepository trial-expiry keys; TrialAccessTest process-reload tests for future and past expiry",
+      "work": "T-020"
+    },
+    "SRC-001:R17": {
+      "actionable": true,
+      "class": "non-goal",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-060",
+      "text": "No Room, no second database and no WorkManager.",
+      "verification": "gradle/libs.versions.toml declares no room/work dependency; release build green in E-060",
+      "work": "T-020"
+    },
+    "SRC-001:R18": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Stored trial ids are validated against the trialable catalog and expired entries may be pruned lazily.",
+      "verification": "TrialAccessTest invalid-trial-id test",
+      "work": "T-020"
+    },
+    "SRC-001:R19": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Time is injectable at the pure logic boundary; System.currentTimeMillis() is not scattered through UI, catalog or service code.",
+      "verification": "trial/TrialClock.kt is the only wall-clock boundary; every trial test runs on fake time",
+      "work": "T-020"
+    },
+    "SRC-001:R2": {
+      "actionable": true,
+      "class": "invariant",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-060",
+      "text": "No subscription or licensing framework and no widget platform; all accepted core, service, billing, lifecycle and background behaviour preserved.",
+      "verification": "161 unique JVM tests 0 failures 21 suites PASS in E-060, no new dependency",
+      "work": "T-020"
+    },
+    "SRC-001:R20": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-055",
+      "text": "One process-level coordinator schedules only the next relevant expiration and recomputes access, with no one-second ticker, no AlarmManager and no exact alarms.",
+      "verification": "TrialCoordinatorTest 6 on virtual time incl. the sooner-of-two-expiries wake-up",
+      "work": "T-024"
+    },
+    "SRC-001:R21": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "startTrial rejects non-trialable ids, creates nothing for purchased content, returns the existing expiry while active, otherwise stores now+300000.",
+      "verification": "TrialAccessTest start/repeat/owned/invalid cases",
+      "work": "T-020"
+    },
+    "SRC-001:R22": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-055",
+      "text": "Access rule: a sound is accessible if free or purchased or in an active trial; a theme if free or Themes Pack is owned or in an active trial.",
+      "verification": "PremiumAccessTest 10 covers each disjunct independently",
+      "work": "T-024"
+    },
+    "SRC-001:R23": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "The main screen shows all catalog sounds with compact TRY 5 MIN / TRIAL mm:ss / OWNED / INCLUDED labels in the existing visual language.",
+      "verification": "ui/TrialUi.kt labels rendered from the sound rows in ui/ProblipScreen.kt",
+      "work": "T-020"
+    },
+    "SRC-001:R24": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Tapping an unowned sound without an active trial starts its trial, adds it to the random pool and makes it playable, without starting Problip itself.",
+      "verification": "ProblipViewModel trial-then-toggle path; selection and session start stay separate actions",
+      "work": "T-020"
+    },
+    "SRC-001:R25": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "On sound trial expiry a RUNNING session updates its prepared pool without restarting the scheduler and never ends with an empty pool, falling back to Original Blip.",
+      "verification": "PoolDeltaTest 4 + TrialAccessTest only-selected-premium-sound fallback test",
+      "work": "T-020"
+    },
+    "SRC-001:R26": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Purchase during a trial turns content permanent immediately with no visible reset at the old expiry.",
+      "verification": "TrialAccessTest ownership-overrides-expiry test",
+      "work": "T-020"
+    },
+    "SRC-001:R27": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-058",
+      "text": "Every theme row is selectable; the old locked or inert theme behaviour is removed.",
+      "verification": "ThemesScreen renders ThemeCatalog.all with trial labels; ThemeCatalogTest sixteen-id order pin",
+      "work": "T-022"
+    },
+    "SRC-001:R28": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "An unowned premium theme without a trial starts that theme's trial, persists the selection and renders immediately; with an active trial it selects without extending the timer.",
+      "verification": "TrialAccessTest per-theme trial tests + persisted theme selection",
+      "work": "T-020"
+    },
+    "SRC-001:R29": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-058",
+      "text": "When the rendered premium theme's trial expires without ownership the effective theme becomes Classic with no Activity restart.",
+      "verification": "ui/theme/Theme.kt recomposes from ThemeCatalog.effective; ThemeCatalogTest expiry fallback",
+      "work": "T-022"
+    },
+    "SRC-001:R3": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Trial duration is exactly 300000 ms.",
+      "verification": "TrialAccessTest exact five-minute window test",
+      "work": "T-020"
+    },
+    "SRC-001:R30": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Trials are per content item with independent expiry times.",
+      "verification": "TrialAccessTest independent sound-pair and theme-pair expiry tests",
+      "work": "T-020"
+    },
+    "SRC-001:R31": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Store screens keep an obvious BUY action with the localized Play price next to TRY 5 MIN, and no individual theme products are added.",
+      "verification": "StoreItemStateTest 9 pins INCLUDED/OWNED/PENDING/PURCHASABLE/LOADING/UNAVAILABLE; ProductCatalog unchanged",
+      "work": "T-013"
+    },
+    "SRC-001:R32": {
+      "actionable": true,
+      "class": "invariant",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Access correctness never depends on the composable countdown, which is informational only.",
+      "verification": "access resolves in trial/PremiumAccess.kt; the countdown in ui/TrialUi.kt only formats remaining time",
+      "work": "T-020"
+    },
+    "SRC-001:R33": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "One home-screen AppWidget for START/STOP only, built from AppWidgetProvider plus RemoteViews, with no Glance, no config UI and no extra dependency.",
+      "verification": "widget/ProblipWidgetProvider.kt + ProblipWidgetUpdater.kt + WidgetState.kt; WidgetStateTest 4",
+      "work": "T-020"
+    },
+    "SRC-001:R34": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "The widget is a compact roughly 2x1 layout with Classic dark and gold branding and is not theme-selectable in this wave.",
+      "verification": "res/layout/widget_problip.xml + res/xml/problip_widget_info.xml, no theme lookup in the widget path",
+      "work": "T-020"
+    },
+    "SRC-001:R35": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Widget buttons toggle the real ProblipService through an explicit PendingIntent, with no second scheduler or audio engine and defensive platform exception handling.",
+      "verification": "ProblipWidgetProvider forwards to ProblipService.start/stop; no scheduler or player type exists under widget/",
+      "work": "T-020"
+    },
+    "SRC-001:R36": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "A missing POST_NOTIFICATIONS must not make the widget unusable, the receiver never requests runtime permission, and no permission is added silently.",
+      "verification": "merged release manifest holds 8 permissions with WAKE_LOCK as the only addition; the in-app request flow is untouched",
+      "work": "T-021"
+    },
+    "SRC-001:R37": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Widget UI follows real session state STOPPED/STARTING/RUNNING/ERROR, refreshed from lifecycle events with no polling and no separate widgetIsRunning flag.",
+      "verification": "WidgetStateTest 4 maps every state to its action; ProblipWidgetUpdater.updateAll is called from the session paths",
+      "work": "T-020"
+    },
+    "SRC-001:R38": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "With the process gone a refreshed widget shows OFF; no BOOT_COMPLETED, no WorkManager polling and no periodic refresh.",
+      "verification": "service is START_NOT_STICKY and AndroidManifest.xml declares no BOOT_COMPLETED receiver or updatePeriodMillis timer",
+      "work": "T-020"
+    },
+    "SRC-001:R39": {
+      "actionable": true,
+      "class": "invariant",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Rapid widget taps produce one scheduler, repeated STOP stays harmless, and START during ERROR creates a fresh session through the accepted lifecycle path.",
+      "verification": "SessionLifecycleTest 10 + the BlipSchedulerTest race test that provably bit in E-035",
+      "work": "T-019"
+    },
+    "SRC-001:R4": {
+      "actionable": true,
+      "class": "invariant",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Repeated selection of an already active trial never extends its expiration.",
+      "verification": "TrialAccessTest no-extension-on-repeat-selection test",
+      "work": "T-020"
+    },
+    "SRC-001:R40": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "The widget provider is declared in AndroidManifest.xml with AppWidgetProviderInfo XML, home screen only, without updatePeriodMillis polling.",
+      "verification": "AndroidManifest.xml receiver + res/xml/problip_widget_info.xml with no periodic update",
+      "work": "T-020"
+    },
+    "SRC-001:R41": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "The 23 listed pure JVM tests for trial, effective-theme and widget logic exist, without adding Robolectric.",
+      "verification": "TrialAccessTest 18 + ThemeCatalogTest + WidgetStateTest 4 cover the listed rows; no Robolectric dependency in the build",
+      "work": "T-020"
+    },
+    "SRC-001:R42": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "disposition": "BLOCKED",
+      "evidence": null,
+      "text": "Manual device acceptance on a physical device: the trial sound run, the trial theme run, the purchase-during-trial run and the fifteen widget rows.",
+      "verification": null,
+      "work": "T-014"
+    },
+    "SRC-001:R43": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "disposition": "VERIFIED",
+      "evidence": "E-060",
+      "text": "Build gate: gradlew test assembleDebug assembleRelease --no-daemon plus release lint, all tests green, unique JVM test count reported, no new dangerous permissions and no duplicate scheduler architecture.",
+      "verification": "gradlew test assembleDebug assembleRelease lintVitalRelease --no-daemon PASS, 161 unique JVM tests 0 failures, lint clean, both APKs built",
+      "work": "T-023"
+    },
+    "SRC-001:R44": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-70",
+      "text": "After successful validation create ONE normal commit, squash nothing, push nothing, and leave a clean final git status.",
+      "verification": "commit e71ef345c037988cecd1346b2f4dcf1bc93834e7 on main, parent 4a8f227, 60 files +4046/-281, nothing squashed, not pushed; product paths clean in git status",
+      "work": "T-25"
+    },
+    "SRC-001:R45": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-72",
+      "text": "Return the fourteen-item deliverable report including commit hash and final git status.",
+      "verification": "all fourteen deliverable items returned to the user, each traced to committed evidence; commit hash and final git status included",
+      "work": "T-25"
+    },
+    "SRC-001:R5": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "After expiry an unowned sound becomes unavailable and an unowned theme stops rendering, with Classic effective again.",
+      "verification": "TrialAccessTest expiry-boundary tests + ThemeCatalog.effective fallback",
+      "work": "T-020"
+    },
+    "SRC-001:R6": {
+      "actionable": true,
+      "class": "requirement",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "Trials are reusable rather than one-time: after expiry the same content may start another five-minute trial.",
+      "verification": "TrialAccessTest immediate-restart-after-expiry test",
+      "work": "T-020"
+    },
+    "SRC-001:R7": {
+      "actionable": true,
+      "class": "non-goal",
+      "disposition": "IMPLEMENTED",
+      "evidence": "E-052",
+      "text": "No cooldowns, counters, accounts, device IDs, server validation or anti-abuse logic.",
+      "verification": "trial/ package holds only TrialAccess/TrialClock/TrialCoordinator/PremiumAccess, no network or counter state",
+      "work": "T-020"
+    },
+    "SRC-001:R8": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "disposition": "VERIFIED",
+      "evidence": "E-045",
+      "text": "Pre-flight fix 1: an active session never initializes audio from a synthetic default Settings().",
+      "verification": "ProblipService.kt:62-67 keeps settingsState null until DataStore answers and :141 waits on filterNotNull().first()",
+      "work": "T-019"
+    },
+    "SRC-001:R9": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "disposition": "VERIFIED",
+      "evidence": "E-045",
+      "text": "Pre-flight fix 2: SoundPool load completion cannot be lost in an immediate callback race and startup cannot stay suspended forever.",
+      "verification": "SoundPoolAudioPlayer.kt:74 registers the listener before load and :115 bounds the wait with withTimeoutOrNull(LOAD_TIMEOUT_MS)",
+      "work": "T-019"
+    }
+  },
+  "schema_version": 1
+}

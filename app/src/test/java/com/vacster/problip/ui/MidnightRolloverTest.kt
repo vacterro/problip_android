@@ -60,4 +60,14 @@ class MidnightRolloverTest {
             durationUntilNextLocalMidnight(utc, instant.toEpochMilli()),
         )
     }
+
+    @Test
+    fun recalculatingAfterAZoneChangeTargetsTheNewLocalMidnight() {
+        val instant = Instant.parse("2026-09-01T02:30:00Z")
+        val tallinn = durationUntilNextLocalMidnight(ZoneId.of("Europe/Tallinn"), instant)
+        val newYork = durationUntilNextLocalMidnight(ZoneId.of("America/New_York"), instant)
+
+        assertEquals(18 * 60 + 30, tallinn.toMinutes())
+        assertEquals(90, newYork.toMinutes())
+    }
 }

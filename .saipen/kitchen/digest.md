@@ -1,0 +1,3 @@
+done: crew epoch converge_intent-a18b035a parked at SC-8 with user decision (E-359); machine stages SC-0..SC-7 satisfied at HEAD 14af046 (sensors, collect, T-53/54/55 reviews, convergence E-I chain E-352..E-356); ship ran LOCAL variant under no-publish, publish skipped by policy
+remaining: T-29 final curated WAVs; T-014 physical-device acceptance; T-009/T-010 Play Console + real Billing; T-015 real support/privacy email + hosted policy; optional saitranslate 27-locale wave to unblock SC-8
+awaiting: user-supplied final five curated premium WAV assets (T-29 HUMAN_ASSET_BLOCKED) — or an explicit order for the 27-locale translation wave / a VERSION+tag release-deferral override

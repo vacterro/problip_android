@@ -90,11 +90,13 @@ class BlipScheduler(
                     delayBoundary.delay(INITIAL_DELAY_MS)
                     while (true) {
                         if (!player.play()) {
-                            _state.value = ProblipState.ERROR
-                            _error.value = "Playback failed"
+                            if (loopJob === self) {
+                                _state.value = ProblipState.ERROR
+                                _error.value = "Playback failed"
+                            }
                             return@launch
                         }
-                        _state.value = ProblipState.RUNNING
+                        if (loopJob === self) _state.value = ProblipState.RUNNING
                         delayBoundary.delay(nextDelayMs())
                     }
                 } catch (e: CancellationException) {
@@ -120,6 +122,27 @@ class BlipScheduler(
             pulseShortSlot = true
             _state.value = ProblipState.STOPPED
         }
+    }
+
+    /**
+     * Awaitable stop — the CORE-001 quiescence boundary. Cancels the loop exactly
+     * like [stop] (inside the lock, so no new iteration can begin after this
+     * decision), then suspends until the loop coroutine has actually terminated.
+     * A synchronous `player.play()` already in progress is allowed to finish and
+     * its success is still counted; nothing new can start. Never call from the
+     * Android main thread — it suspends. Idempotent, and returns immediately when
+     * no loop is running (repeated STOP, or the loop exited on its own with ERROR).
+     */
+    suspend fun stopAndAwaitQuiescence() {
+        val loop: Job?
+        synchronized(lock) {
+            loop = loopJob
+            loop?.cancel()
+            loopJob = null
+            pulseShortSlot = true
+            _state.value = ProblipState.STOPPED
+        }
+        loop?.join()
     }
 
     companion object {

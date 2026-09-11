@@ -348,8 +348,8 @@ fun ProblipScreen(
                         maxLines = 1,
                     )
                 BlipCounterMode.STATS -> {
-                    val midnightBump = rememberMidnightBump()
-                    val stats = remember(statsRecord, midnightBump) { viewModel.currentStats() }
+                    val calendarEpoch = rememberCalendarEpoch()
+                    val stats = remember(statsRecord, calendarEpoch) { viewModel.currentStats() }
                     MainStatsStrip(
                         stats =
                             MainStatsValues(

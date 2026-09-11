@@ -1,0 +1,71 @@
+{
+  "op_id": "sub-collect-79355be2",
+  "operation": "sub_collect",
+  "created_at": "2026-09-09T02:57:26Z",
+  "agent": "saipython",
+  "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+  "project_lineage": "lineage-ababa531be8d45d18b3e0c23adb738a9",
+  "semantic_payload_hash": "fb2106d0322da655",
+  "preconditions": {
+    ".saipen/LOG.md": "6efb2375f28f9f65",
+    ".saipen/BOARD.md": "876e0de05e763f1d",
+    ".saipen/STATE.md": "904acf1788476592",
+    ".saipen/extensions/subs/MANIFEST.md": "4e3dad860e055b81"
+  },
+  "read_preconditions": {
+    ".": "source-identity-v1:20745ef808387659ace8dda67e96d1b0192194c9e0c036a9a0dd5dd1777d9605",
+    ".saipen/logs/LOG-001.md": "d2a7535e354252c0",
+    "V:/___VAC/__K/__CODE/_ANDROID/ProBlipAndroid/.saipen/extensions/subs/saitest.md": "0a244a9bc0b9eafa",
+    ".saipen/extensions/subs/saitest/kitchen/OUTBOX.md": "726523eb3fef7991"
+  },
+  "verification_policy": "sub_collect",
+  "status": "COMMITTED",
+  "progress_index": 4,
+  "targets": [
+    {
+      "path": ".saipen/LOG.md",
+      "role": "log",
+      "action": "write",
+      "before_hash": "6efb2375f28f9f65",
+      "after_hash": "81e180ba5c4c00e8",
+      "applied": true
+    },
+    {
+      "path": ".saipen/BOARD.md",
+      "role": "board",
+      "action": "write",
+      "before_hash": "876e0de05e763f1d",
+      "after_hash": "3a8b28d7757e6eb5",
+      "applied": true
+    },
+    {
+      "path": ".saipen/STATE.md",
+      "role": "state",
+      "action": "write",
+      "before_hash": "904acf1788476592",
+      "after_hash": "d26c487e302754d9",
+      "applied": true
+    },
+    {
+      "path": ".saipen/extensions/subs/MANIFEST.md",
+      "role": "manifest",
+      "action": "write",
+      "before_hash": "4e3dad860e055b81",
+      "after_hash": "1b978ada33e08839",
+      "applied": true
+    }
+  ],
+  "receipt_metadata": {
+    "operation": "sub_collect",
+    "status": "COMMITTED",
+    "package_identities": [
+      "sha256:123ad549ac6ecfffb42fefa346e93d19354679b25fd82ac482bb69b130f773df"
+    ],
+    "producers": [
+      "saitest"
+    ],
+    "tickets": [
+      "T-42"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "gate": "collect",
+  "receipt_dir_mtime_ns": 1788920759992543800,
+  "receipt_id": "receipt-e28a74df30ce",
+  "receipt_path": ".saipen/recovery/conformance/2026-09-09T02_25_59.860964Z_receipt-e28a74df30ce_collect_FAIL.json",
+  "timestamp_utc": "2026-09-09T02:25:59.860964Z",
+  "version": 1
+}

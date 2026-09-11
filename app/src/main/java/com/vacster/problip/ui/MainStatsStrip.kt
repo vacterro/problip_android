@@ -1,11 +1,16 @@
 package com.vacster.problip.ui
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -13,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -26,22 +32,35 @@ import java.time.ZoneId
 import kotlinx.coroutines.delay
 
 /**
- * Midnight rollover for the Main STATS strip: one UI-only delay to the next
- * local midnight (the only calendar boundary the day/week/month periods roll
- * over at) and one recomposition flag — the same strategy Settings already
- * uses. No WorkManager, no AlarmManager, no ticker; Main composable gone =
- * the loop is gone.
+ * Composition-scoped calendar invalidation shared by both statistics surfaces.
+ * A one-shot delay handles normal local midnight. Date/time/timezone broadcasts
+ * bump the epoch immediately, cancel the stale delay, and schedule the next
+ * boundary using the current system zone. The receiver exists only while this
+ * composable is alive.
  */
 @Composable
-internal fun rememberMidnightBump(): Int {
-    var bump by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(durationUntilNextLocalMidnight(ZoneId.systemDefault()).toMillis())
-            bump++
+internal fun rememberCalendarEpoch(): Int {
+    val context = LocalContext.current
+    var epoch by remember { mutableIntStateOf(0) }
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                epoch++
+            }
         }
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_DATE_CHANGED)
+            addAction(Intent.ACTION_TIME_CHANGED)
+            addAction(Intent.ACTION_TIMEZONE_CHANGED)
+        }
+        context.registerReceiver(receiver, filter)
+        onDispose { context.unregisterReceiver(receiver) }
     }
-    return bump
+    LaunchedEffect(epoch) {
+        delay(durationUntilNextLocalMidnight(ZoneId.systemDefault()).toMillis())
+        epoch++
+    }
+    return epoch
 }
 
 /**

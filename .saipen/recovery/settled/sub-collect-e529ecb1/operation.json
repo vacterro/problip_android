@@ -1,0 +1,71 @@
+{
+  "op_id": "sub-collect-e529ecb1",
+  "operation": "sub_collect",
+  "created_at": "2026-09-09T13:46:16Z",
+  "agent": "saipython",
+  "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+  "project_lineage": "lineage-ababa531be8d45d18b3e0c23adb738a9",
+  "semantic_payload_hash": "b2f74e3234a7fd01",
+  "preconditions": {
+    ".saipen/LOG.md": "76dc6fb1d052cc2d",
+    ".saipen/BOARD.md": "32fc18786a45843b",
+    ".saipen/STATE.md": "674b0c96b41d827c",
+    ".saipen/extensions/subs/MANIFEST.md": "31f345ba8ecc5ac9"
+  },
+  "read_preconditions": {
+    ".": "source-identity-v1:3aee4e231753bba1351749846be092b94f10dbe3f1971a58b4bd0ca91b8405f3",
+    ".saipen/logs/LOG-001.md": "d2a7535e354252c0",
+    "V:/___VAC/__K/__CODE/_ANDROID/ProBlipAndroid/.saipen/extensions/subs/saipython.md": "a82a330b15f229c8",
+    ".saipen/extensions/subs/saipython/kitchen/OUTBOX.md": "84a09c4e3276b09a"
+  },
+  "verification_policy": "sub_collect",
+  "status": "COMMITTED",
+  "progress_index": 4,
+  "targets": [
+    {
+      "path": ".saipen/LOG.md",
+      "role": "log",
+      "action": "write",
+      "before_hash": "76dc6fb1d052cc2d",
+      "after_hash": "44bb5654e8c14e26",
+      "applied": true
+    },
+    {
+      "path": ".saipen/BOARD.md",
+      "role": "board",
+      "action": "write",
+      "before_hash": "32fc18786a45843b",
+      "after_hash": "0797d596f1ec48c7",
+      "applied": true
+    },
+    {
+      "path": ".saipen/STATE.md",
+      "role": "state",
+      "action": "write",
+      "before_hash": "674b0c96b41d827c",
+      "after_hash": "3dd30f324c315348",
+      "applied": true
+    },
+    {
+      "path": ".saipen/extensions/subs/MANIFEST.md",
+      "role": "manifest",
+      "action": "write",
+      "before_hash": "31f345ba8ecc5ac9",
+      "after_hash": "71942aa5a84b93c0",
+      "applied": true
+    }
+  ],
+  "receipt_metadata": {
+    "operation": "sub_collect",
+    "status": "COMMITTED",
+    "package_identities": [
+      "sha256:94fb2fd46118b2df4f10fd7463bdb89582fdfd39332a245b6d8c48ffcb224312"
+    ],
+    "producers": [
+      "saipython"
+    ],
+    "tickets": [
+      "T-55"
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "clauses": {
+    "SRC-003:R0001": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Sound content readiness: search the repository and reference intake for explicitly supplied final user-selected WAV assets; if absent, mark ONLY the audio-replacement subtask HUMAN_ASSET_BLOCKED and continue every other T-28 item; do not synthesize, download or rename placeholder sounds."
+    },
+    "SRC-003:R0002": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Audio source ledger: add reference/audio/SOURCES.md listing each final sound (stable id, user-facing name, source filename, origin/author, license or original/user-supplied, transformation); if final assets are still missing create the ledger structure and mark entries PENDING USER ASSET; keep README placeholder warning until real final WAVs present; remove scripts/make_placeholder_sounds.py ONLY after all placeholder premium WAVs genuinely replaced."
+    },
+    "SRC-003:R0003": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Remove the duplicate Custom theme (theme_wintage_custom) from the user-visible theme catalog, leaving 15 visible Wintage themes (1 free Golden Default + 14 premium non-duplicate); do not modify remaining authoritative palette colors; handle stored theme_wintage_custom safely via a tiny legacy-id normalization to Golden Default/theme_classic, no crash, no invisible selected theme, no migration subsystem; remove ThemeCatalog.CUSTOM, PALETTE_CUSTOM and duplicate-only tests; update tests to pin visible catalog count, no duplicate Custom entry, legacy id resolution to Golden Default, every visible theme has a palette, no remaining visible duplicate of Golden Default."
+    }
+  },
+  "derived_at": "2026-09-08T18:22:27Z",
+  "derived_from": "SRC-003",
+  "interpretation_revision": 3,
+  "schema_version": 1,
+  "source_sha256": "97bf68781df5e8f7b76cb8be03578f2bc5b63def20ce94945a058b58869b6ee1"
+}

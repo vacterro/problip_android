@@ -19,10 +19,8 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,7 +38,6 @@ import com.vacster.problip.R
 import com.vacster.problip.settings.BlipCounterMode
 import com.vacster.problip.trial.PremiumAccess
 import com.vacster.problip.trial.TrialAccess
-import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -70,23 +67,11 @@ fun SettingsScreen(
         ?.let { it > System.currentTimeMillis() } == true
     val now = rememberTrialNow(enabled = access.developerAccess || glowTrialRunning)
     var languageDialogOpen by remember { mutableStateOf(false) }
+    val calendarEpoch = rememberCalendarEpoch()
 
-    // Period display must roll over while Settings stays open: all day/week/
-    // month transitions happen at local midnight, so one UI-only delay to the
-    // next boundary and one recomposition flag are enough — no WorkManager, no
-    // ticker, no background anything.
-    var periodBump by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(durationUntilNextLocalMidnight(ZoneId.systemDefault()).toMillis())
-            periodBump++
-        }
-    }
     StoreScaffold(title = stringResource(R.string.settings_title), onBack = onBack) {
         SectionLabel(stringResource(R.string.statistics_section))
-        // Keyed on periodBump so the midnight wake recomputes the snapshot even
-        // when no new blip has arrived and statsRecord has not emitted.
-        val stats = remember(statsRecord, periodBump) { viewModel.currentStats() }
+        val stats = remember(statsRecord, calendarEpoch) { viewModel.currentStats() }
         StatRow(stringResource(R.string.stats_today), formatBlipCount(stats.todayCount))
         StatRow(stringResource(R.string.stats_week), formatBlipCount(stats.weekCount))
         StatRow(stringResource(R.string.stats_month), formatBlipCount(stats.monthCount))

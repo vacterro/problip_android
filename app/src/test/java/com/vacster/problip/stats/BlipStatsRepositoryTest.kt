@@ -62,6 +62,44 @@ class BlipStatsRepositoryTest {
         FixedClock(ZonedDateTime.of(y, m, d, hour, 0, 0, 0, ZoneId.of("UTC")))
 
     @Test
+    fun `a live timezone change immediately re-resolves the current periods`() = runTest {
+        // CORE-002: ONE repository, the production-shape authority (dynamic zone),
+        // fixed instant on the UTC date boundary where Tallinn is already on
+        // 2026-09-01 while New York is still on 2026-08-31.
+        val store = FakeDataStore()
+        val instant = Instant.parse("2026-09-01T02:30:00Z")
+        var zone = ZoneId.of("Europe/Tallinn")
+        val repo = BlipStatsRepository(store, backgroundScope, CalendarAuthority { CalendarNow(instant, zone) })
+        repo.start()
+        runCurrent()
+
+        // The first successful blip is bucketed under the Tallinn calendar.
+        repo.recordSuccessfulBlip()
+        assertEquals("2026-09-01", repo.record.value.dayKey)
+        assertEquals("2026-W36", repo.record.value.weekKey)
+        assertEquals("2026-09", repo.record.value.monthKey)
+        assertEquals(1L, repo.snapshot().todayCount)
+        assertEquals(1L, repo.snapshot().totalCount)
+
+        // Only the injected zone authority changes; the repository itself is
+        // untouched and never restarted.
+        zone = ZoneId.of("America/New_York")
+
+        // The old Tallinn bucket no longer matches the New York calendar, so the
+        // current-period read falls back to zero immediately.
+        assertEquals(0L, repo.snapshot().todayCount)
+        assertEquals(1L, repo.snapshot().totalCount)
+
+        // The next successful blip is bucketed under the New York calendar.
+        repo.recordSuccessfulBlip()
+        assertEquals("2026-08-31", repo.record.value.dayKey)
+        assertEquals("2026-W36", repo.record.value.weekKey)
+        assertEquals("2026-08", repo.record.value.monthKey)
+        assertEquals(2L, repo.record.value.totalCount)
+        assertFalse(repo.record.value.earnedPremium)
+    }
+
+    @Test
     fun `blips accumulate in memory and persist after the bounded interval`() = runTest {
         val store = FakeDataStore()
         val clock = utcClock(2026, 9, 7)
@@ -81,11 +119,217 @@ class BlipStatsRepositoryTest {
     }
 
     @Test
+    fun `a blip during an in-flight write gets a trailing persistence pass`() = runTest {
+        // CORE-001 trailing-write regression: the pass captures total=50 and parks
+        // inside the store; a real blip advances memory to 51; the released first
+        // write lands 50; the pump must then perform a trailing write so the final
+        // persisted total is 51 — never stuck at 50.
+        val gate = CompletableDeferred<Unit>()
+        var writes = 0
+        val store = object : DataStore<Preferences> {
+            val state = MutableStateFlow<Preferences>(emptyPreferences())
+            override val data: kotlinx.coroutines.flow.Flow<Preferences> = state
+            override suspend fun updateData(
+                transform: suspend (Preferences) -> Preferences,
+            ): Preferences {
+                gate.await()
+                val next = transform(state.value.toMutablePreferences()) as MutablePreferences
+                state.value = next
+                writes++
+                return next
+            }
+        }
+        val repo = BlipStatsRepository(store, backgroundScope, utcClock(2026, 9, 7))
+        repo.start()
+        runCurrent()
+
+        repeat(50) { repo.recordSuccessfulBlip() }
+        assertEquals(50L, repo.record.value.totalCount)
+
+        // The batched write of 50 begins and captures 50, then parks inside the store.
+        repo.flush()
+        runCurrent()
+        assertEquals("memory 50 captured for the in-flight write", 50L, repo.record.value.totalCount)
+
+        // A real successful blip lands BEFORE the persistence completes.
+        repo.recordSuccessfulBlip()
+        assertEquals(51L, repo.record.value.totalCount)
+
+        // The old persistence completes with the stale 50.
+        gate.complete(Unit)
+        runCurrent()
+        assertEquals(50L, store.state.value[longPreferencesKey("total_count")])
+
+        // The pump covers the newer revision with a trailing pass: disk catches
+        // up to 51 while memory never moved backwards.
+        advanceTimeBy(BlipStatsRepository.PERSIST_INTERVAL_MS + 1)
+        runCurrent()
+        assertEquals(51L, store.state.value[longPreferencesKey("total_count")])
+        assertEquals(51L, repo.record.value.totalCount)
+        // Exactly the two expected passes — no write storm.
+        assertEquals(2, writes)
+    }
+
+    @Test
+    fun `blips that land while the worker is retiring still get persisted`() = runTest {
+        // CORE-001 worker-exit boundary: blips arriving exactly at the moment the
+        // pump decides it is finished must find a worker (the same one re-armed,
+        // or a freshly launched one) — dirty data can never be left with no
+        // active/scheduled persistence.
+        val gate = CompletableDeferred<Unit>()
+        val store = object : DataStore<Preferences> {
+            val state = MutableStateFlow<Preferences>(emptyPreferences())
+            override val data: kotlinx.coroutines.flow.Flow<Preferences> = state
+            override suspend fun updateData(
+                transform: suspend (Preferences) -> Preferences,
+            ): Preferences {
+                gate.await()
+                val next = transform(state.value.toMutablePreferences()) as MutablePreferences
+                state.value = next
+                return next
+            }
+        }
+        val repo = BlipStatsRepository(store, backgroundScope, utcClock(2026, 9, 7))
+        repo.start()
+        runCurrent()
+
+        repeat(10) { repo.recordSuccessfulBlip() }
+        repo.flush() // immediate pass parks inside the gated store
+        runCurrent()
+
+        // The pass is still suspended in the store; every blip here lands during
+        // the pass's life, right up to its completion.
+        repo.recordSuccessfulBlip()
+        repo.recordSuccessfulBlip()
+        gate.complete(Unit)
+        repo.recordSuccessfulBlip() // potentially inside the pump's retire check
+        repo.recordSuccessfulBlip()
+        runCurrent()
+
+        // All revisions must eventually land: drain with the awaitable flush and
+        // assert memory and disk agree exactly.
+        repo.flushAndAwait()
+        runCurrent()
+        assertEquals(14L, repo.record.value.totalCount)
+        assertEquals(14L, store.state.value[longPreferencesKey("total_count")])
+    }
+
+    @Test
+    fun `flushAndAwait covers everything recorded before it and returns`() = runTest {
+        val store = FakeDataStore()
+        val repo = BlipStatsRepository(store, backgroundScope, utcClock(2026, 9, 7))
+        repo.start()
+        runCurrent()
+
+        // No blips recorded: the awaitable flush returns immediately.
+        repo.flushAndAwait()
+        assertEquals(0L, store.state.value[longPreferencesKey("total_count")] ?: 0L)
+
+        repeat(3) { repo.recordSuccessfulBlip() }
+        repo.flushAndAwait()
+        assertEquals(3L, store.state.value[longPreferencesKey("total_count")])
+        assertEquals(3L, repo.record.value.totalCount)
+    }
+
+    @Test
+    fun `flushAndAwait does not chase blips recorded after it`() = runTest {
+        // At the quiescence boundary nothing new can arrive; but if it did, the
+        // flush that captured the earlier revision must still return — the newer
+        // revision gets its own ordinary trailing write instead of dragging the
+        // stop path with it.
+        val gate = CompletableDeferred<Unit>()
+        val store = object : DataStore<Preferences> {
+            val state = MutableStateFlow<Preferences>(emptyPreferences())
+            override val data: kotlinx.coroutines.flow.Flow<Preferences> = state
+            override suspend fun updateData(
+                transform: suspend (Preferences) -> Preferences,
+            ): Preferences {
+                gate.await()
+                val next = transform(state.value.toMutablePreferences()) as MutablePreferences
+                state.value = next
+                return next
+            }
+        }
+        val repo = BlipStatsRepository(store, backgroundScope, utcClock(2026, 9, 7))
+        repo.start()
+        runCurrent()
+        repo.recordSuccessfulBlip()
+        repo.recordSuccessfulBlip()
+
+        var flushed = false
+        val job = launch { repo.flushAndAwait(); flushed = true }
+        runCurrent() // flush pass parks inside the gated store
+        assertEquals(2L, repo.record.value.totalCount)
+
+        // A NEW revision lands while the flush is suspended in the write.
+        repo.recordSuccessfulBlip()
+        gate.complete(Unit)
+        runCurrent()
+
+        // The flush returns once its own captured revision is covered...
+        assertTrue(flushed)
+        // ...and the newer blip persists via its own trailing write.
+        advanceTimeBy(BlipStatsRepository.PERSIST_INTERVAL_MS + 1)
+        runCurrent()
+        assertEquals(3L, store.state.value[longPreferencesKey("total_count")])
+        job.join()
+    }
+
+    @Test
+    fun `an immediate request wakes a worker sitting in its batch interval`() = runTest {
+        // The 100K entitlement and teardown flushes must not sit out a full
+        // batching interval when a pass is already waiting.
+        val store = FakeDataStore()
+        val repo = BlipStatsRepository(store, backgroundScope, utcClock(2026, 9, 7))
+        repo.start()
+        runCurrent()
+
+        repeat(99_999) { repo.recordSuccessfulBlip() }
+        // The batched pass for 99_999 is now parked in its 1 s wait.
+        runCurrent()
+
+        // The 100,000th blip crosses the reward — no virtual time passes.
+        repo.recordSuccessfulBlip()
+        runCurrent()
+
+        assertTrue(repo.record.value.earnedPremium)
+        assertEquals(
+            true,
+            store.state.value[booleanPreferencesKey("earned_premium")],
+        )
+        assertEquals(100_000L, store.state.value[longPreferencesKey("total_count")])
+    }
+
+    @Test
+    fun `an IOException on write never hangs the final flush`() = runTest {
+        // Stats I/O failure stays secondary: the awaitable teardown flush still
+        // returns, the pump retires, and the session path is unaffected.
+        val store = object : DataStore<Preferences> {
+            val state = MutableStateFlow<Preferences>(emptyPreferences())
+            override val data: kotlinx.coroutines.flow.Flow<Preferences> = state
+            override suspend fun updateData(
+                transform: suspend (Preferences) -> Preferences,
+            ): Preferences = throw java.io.IOException("disk full")
+        }
+        val repo = BlipStatsRepository(store, backgroundScope, utcClock(2026, 9, 7))
+        repo.start()
+        runCurrent()
+        repeat(3) { repo.recordSuccessfulBlip() }
+
+        // Must return, not throw and not hang.
+        repo.flushAndAwait()
+        runCurrent()
+
+        assertEquals(3L, repo.record.value.totalCount)
+        assertTrue(repo.ready.value)
+    }
+
+    @Test
     fun `a delayed persistence completion never drags memory backwards`() = runTest {
-        // THE race from the audit: memory = 50, the write of 50 is captured and in
-        // flight, a real blip makes memory = 51, the old write completes with 50
-        // and its persisted value lands back. The DataStore is a persistence log,
-        // not a live authority, so nothing flows back: memory REMAINS 51.
+        // The audit sequence stays true: a write captured at 50 completing after
+        // memory moved to 51 must never drag memory back — the DataStore is a
+        // persistence log, never a live authority. Disk catch-up for the newer
+        // revision is covered by the trailing-write regression above.
         val gate = CompletableDeferred<Unit>()
         val store = object : DataStore<Preferences> {
             val state = MutableStateFlow<Preferences>(emptyPreferences())

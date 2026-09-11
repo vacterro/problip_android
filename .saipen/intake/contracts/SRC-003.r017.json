@@ -1,0 +1,94 @@
+{
+  "clauses": {
+    "SRC-003:R0001": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Sound content readiness: search the repository and reference intake for explicitly supplied final user-selected WAV assets; if absent, mark ONLY the audio-replacement subtask HUMAN_ASSET_BLOCKED and continue every other T-28 item; do not synthesize, download or rename placeholder sounds."
+    },
+    "SRC-003:R0002": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Audio source ledger: add reference/audio/SOURCES.md listing each final sound (stable id, user-facing name, source filename, origin/author, license or original/user-supplied, transformation); if final assets are still missing create the ledger structure and mark entries PENDING USER ASSET; keep README placeholder warning until real final WAVs present; remove scripts/make_placeholder_sounds.py ONLY after all placeholder premium WAVs genuinely replaced."
+    },
+    "SRC-003:R0003": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Remove the duplicate Custom theme (theme_wintage_custom) from the user-visible theme catalog, leaving 15 visible Wintage themes (1 free Golden Default + 14 premium non-duplicate); do not modify remaining authoritative palette colors; handle stored theme_wintage_custom safely via a tiny legacy-id normalization to Golden Default/theme_classic, no crash, no invisible selected theme, no migration subsystem; remove ThemeCatalog.CUSTOM, PALETTE_CUSTOM and duplicate-only tests; update tests to pin visible catalog count, no duplicate Custom entry, legacy id resolution to Golden Default, every visible theme has a palette, no remaining visible duplicate of Golden Default."
+    },
+    "SRC-003:R0004": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Widget 1x1-first: primary supported size 1x1; smallest form remains useful (brand mark or P, state hint, one large START/STOP target); widget stays START/STOP ONLY with no EXIT/MINIMIZE/interval picker/sound picker/stats counter/Glow/Billing/trial controls; preserve state contract STOPPED->START, STARTING->STOP, RUNNING->STOP, ERROR->START; resizable 1x1/2x1/2x2 via resizeMode horizontal|vertical with sensible minResizeWidth/minResizeHeight; one compact layout plus at most one expanded layout/visibility arrangement; no mini responsive framework; add tests for any new pure size/presentation policy; no Robolectric solely to count pixels."
+    },
+    "SRC-003:R0005": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Create one small coherent Problip visual identity mark: geometric BLIP pulse mark around a compact central square/dot and one or two surrounding signal/pulse shapes; fits Golden Default/Wintage compact desktop-tool language; recognizable at 16-24 px; readable in monochrome; not dependent on tiny lettering; must not look like Wi-Fi/Bluetooth/Spotify/alarm clock/medical ECG/generic play button; one canonical vector geometry adapted across containers."
+    },
+    "SRC-003:R0006": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Adaptive launcher icon for API 26+ with foreground and background layers using Golden Default identity colors; important foreground geometry inside adaptive safe bounds; no PROBLIP word inside the launcher icon; legacy/fallback mipmap resources for launchers that require them; manifest must reference proper launcher icon resources (android:icon and android:roundIcon); do not leave Android generic fallback application icon."
+    },
+    "SRC-003:R0007": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Monochrome themed icon support: real single-color silhouette/mask layer with no embedded Golden Default colors, no gradients; must still resemble the Problip mark at launcher scale."
+    },
+    "SRC-003:R0008": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "In-app brand mark: preserve the text PROBLIP in Main; add the small mark as part of the existing header identity; do NOT increase header height materially; do NOT break the secret Developer Access gesture that depends on holding the PROBLIP title >= 20 seconds \u2014 mark+title inside the same existing gesture hit target, or mark decorative with title keeping the exact gesture target; tapping the new mark must not accidentally unlock Developer Access; do not reintroduce Main scrolling."
+    },
+    "SRC-003:R0009": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Notification small icon correction: replace ic_stat_problip.xml two-opaque-colored-rectangles design with a proper monochrome alpha silhouette (white/opaque geometry, transparent background); central hole must be genuinely transparent via correct vector path geometry/fill rules; no colored notification small icon; keep .setSmallIcon(R.drawable.ic_stat_problip) unless strong reason to rename; verify at 24dp status-bar scale, light and dark system UI."
+    },
+    "SRC-003:R0010": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Brand consistency: same Problip identity recognizable across launcher, Main header, widget, notification; do not force the full launcher container shape into the notification icon; widget may use the compact mark rather than spelling PROBLIP when 1x1 space is tight."
+    },
+    "SRC-003:R0011": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Accessibility: decorative logo must not add noisy duplicate screen-reader announcements; interactive brand/title retains existing meaningful PROBLIP semantics; widget START/STOP text must remain understandable without relying only on color or the logo."
+    },
+    "SRC-003:R0012": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Release-content cleanup: search project for placeholder/temporary/TODO/FIXME/sample/debug/synthesized/stand-in/Custom/16 themes/248 unique; classify every hit; do not blindly delete developer comments; fix user/release-facing stale material; at minimum README 248 -> final test count after T-28, README theme count -> 15 if Custom removed, README placeholder audio warning kept until real final assets present, README Next code wave updated honestly."
+    },
+    "SRC-003:R0013": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Do not change core behaviour: BlipScheduler, DelayBoundary, WakeLock, ProblipService lifecycle, SoundPool async-load correctness, PULSE timing, Manual timing, stats persistence, 100K reward, PremiumAccess semantics, trial expiry, Developer Access, BillingRepository, ColdStart, Blip Glow event source \u2014 unless a regression test from this wave proves an actual bug."
+    },
+    "SRC-003:R0014": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "No new Android permissions; prefer zero new dependencies; VectorDrawable/adaptive icon/RemoteViews are enough; no icon framework dependency."
+    },
+    "SRC-003:R0015": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Tests: preserve all current 251 tests; add focused tests for themes (visible catalog no Custom, final visible count, legacy theme_wintage_custom safely falls back to Golden Default, every visible theme has a palette, no remaining visible duplicate of Golden Default), widget (state mapping unchanged, compact presentation policy START/STOP-only, resize policy invents no additional actions), sounds (when final assets actually supplied: every SoundCatalog entry points to an existing raw resource, every ProductCatalog premium sound id resolves to exactly one SoundCatalog entry, no placeholder catalog entry remains unintentionally, free Original remains free and playable), branding (prefer resource/build verification over fragile pixel tests; verify manifest launcher icon references exist)."
+    },
+    "SRC-003:R0016": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Build/resource gate: run gradlew test assembleDebug assembleRelease lint lintVitalRelease --no-daemon; verify packaged debug APK contains launcher adaptive icon resources, monochrome icon resource, Problip brand vector, corrected notification icon, widget 1x1 provider metadata, no theme_wintage_custom visible catalog entry; if final WAVs supplied verify their resource names and catalog mappings in the APK; report unique JVM tests, suites, failures/errors, lint, debug APK size, release APK size."
+    },
+    "SRC-003:R0017": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Physical checklist for user: launcher icon/adaptive masking/themed monochrome; Main brand mark, no new scroll, secret 20-second chord exact behavior; notification status bar icon recognizable, no solid square/blob, light/dark rendering; widget ~1x1 placement, START/STOP easy to hit, 2x1/2x2 resize clean, no text clipping, state synchronized; themes Custom absent, previously-selected Custom safely becomes Golden Default; sounds subjective loudness/character and multi-sound pool behavior. These are NOT claimed from JVM tests."
+    }
+  },
+  "derived_at": "2026-09-08T18:22:32Z",
+  "derived_from": "SRC-003",
+  "interpretation_revision": 17,
+  "schema_version": 1,
+  "source_sha256": "97bf68781df5e8f7b76cb8be03578f2bc5b63def20ce94945a058b58869b6ee1"
+}

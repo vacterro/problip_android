@@ -1,0 +1,54 @@
+{
+  "op_id": "convergence-5db0cba70ffc4c988d24fdbff13af136",
+  "operation": "convergence_stage",
+  "created_at": "2026-09-09T02:55:00Z",
+  "agent": "codebuff",
+  "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+  "project_lineage": "lineage-ababa531be8d45d18b3e0c23adb738a9",
+  "semantic_payload_hash": "2b64d6257f2fd246",
+  "preconditions": {
+    ".saipen/STATE.md": "bcd87bf3b6164136",
+    ".saipen/LOG.md": "7ee8d28c0ba6d468"
+  },
+  "read_preconditions": {
+    ".saipen/BOARD.md": "cf25db1297dfd2d7",
+    ".saipen/logs": "delete-tree-sha256:14cf9ab05bfbbf27473ee86c2b95367788622dffac6aa57657057898deb53c99",
+    ".": "source-identity-v1:20745ef808387659ace8dda67e96d1b0192194c9e0c036a9a0dd5dd1777d9605"
+  },
+  "verification_policy": "core_fast",
+  "status": "COMMITTED",
+  "progress_index": 2,
+  "targets": [
+    {
+      "path": ".saipen/LOG.md",
+      "role": "log",
+      "action": "write",
+      "before_hash": "7ee8d28c0ba6d468",
+      "after_hash": "a0b43e3f062e635e",
+      "applied": true
+    },
+    {
+      "path": ".saipen/STATE.md",
+      "role": "state",
+      "action": "write",
+      "before_hash": "bcd87bf3b6164136",
+      "after_hash": "e83fe04428474dc4",
+      "applied": true
+    }
+  ],
+  "receipt_metadata": {
+    "operation": "convergence_stage",
+    "status": "COMMITTED",
+    "stage": "G",
+    "verdict": "NOTHING_SAFE_REMAINED",
+    "source_head": "0661d1bad192e5e0a6eeff70a15942ea09f716fc",
+    "source_tree_fingerprint": "git-delta-v1:3bf38be36accb8c9ffa04733e62aa313e414325826a8508734cbadcd93202652",
+    "detail": "CLEAN at frozen HEAD 0661d1ba: DONE rows already scrubbed at db774a4 (17 rows, sanctioned); remaining tree holds only uncommitted protocol-surface state owned by engine ops; no ambiguous or destructive target exists -- nothing safe remained to clean at this identity",
+    "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+    "input_source_head": "0661d1bad192e5e0a6eeff70a15942ea09f716fc",
+    "input_source_tree_fingerprint": "git-delta-v1:3bf38be36accb8c9ffa04733e62aa313e414325826a8508734cbadcd93202652",
+    "resulting_source_head": "0661d1bad192e5e0a6eeff70a15942ea09f716fc",
+    "resulting_source_tree_fingerprint": "git-delta-v1:3bf38be36accb8c9ffa04733e62aa313e414325826a8508734cbadcd93202652",
+    "event_id": "E-214"
+  }
+}

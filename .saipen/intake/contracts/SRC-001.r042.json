@@ -1,0 +1,219 @@
+{
+  "clauses": {
+    "SRC-001:R1": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Ship exactly three features: five-minute trials for unowned premium sounds, five-minute trials for unowned premium themes, and one compact home-screen START/STOP widget."
+    },
+    "SRC-001:R10": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "text": "Pre-flight fix 3: effective theme selection falls back to Classic when the premium entitlement is unavailable."
+    },
+    "SRC-001:R11": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "text": "Pre-flight fix 4: a successful Billing refresh does not leave an obsolete previous store error."
+    },
+    "SRC-001:R12": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "One small Android-independent trial model (TrialAccess, TrialClock, trial state) instead of a large architecture."
+    },
+    "SRC-001:R13": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Trial ids are the existing content ids; sound_original, theme_classic and theme_pack never get trial ids."
+    },
+    "SRC-001:R14": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Premium theme trial ids are theme_terminal, theme_phosphor, theme_midnight, theme_amber and theme_pink."
+    },
+    "SRC-001:R15": {
+      "actionable": true,
+      "class": "invariant",
+      "text": "Ownership and trial access stay separate concepts; BillingRepository never believes trial items are owned."
+    },
+    "SRC-001:R16": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Trial expiry survives Activity recreation, process death and app restart, persisted as wall-clock epoch millis in the existing DataStore."
+    },
+    "SRC-001:R17": {
+      "actionable": true,
+      "class": "non-goal",
+      "text": "No Room, no second database and no WorkManager."
+    },
+    "SRC-001:R18": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Stored trial ids are validated against the trialable catalog and expired entries may be pruned lazily."
+    },
+    "SRC-001:R19": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Time is injectable at the pure logic boundary; System.currentTimeMillis() is not scattered through UI, catalog or service code."
+    },
+    "SRC-001:R2": {
+      "actionable": true,
+      "class": "invariant",
+      "text": "No subscription or licensing framework and no widget platform; all accepted core, service, billing, lifecycle and background behaviour preserved."
+    },
+    "SRC-001:R20": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "One process-level coordinator schedules only the next relevant expiration and recomputes access, with no one-second ticker, no AlarmManager and no exact alarms."
+    },
+    "SRC-001:R21": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "startTrial rejects non-trialable ids, creates nothing for purchased content, returns the existing expiry while active, otherwise stores now+300000."
+    },
+    "SRC-001:R22": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Access rule: a sound is accessible if free or purchased or in an active trial; a theme if free or Themes Pack is owned or in an active trial."
+    },
+    "SRC-001:R23": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "The main screen shows all catalog sounds with compact TRY 5 MIN / TRIAL mm:ss / OWNED / INCLUDED labels in the existing visual language."
+    },
+    "SRC-001:R24": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Tapping an unowned sound without an active trial starts its trial, adds it to the random pool and makes it playable, without starting Problip itself."
+    },
+    "SRC-001:R25": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "On sound trial expiry a RUNNING session updates its prepared pool without restarting the scheduler and never ends with an empty pool, falling back to Original Blip."
+    },
+    "SRC-001:R26": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Purchase during a trial turns content permanent immediately with no visible reset at the old expiry."
+    },
+    "SRC-001:R27": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Every theme row is selectable; the old locked or inert theme behaviour is removed."
+    },
+    "SRC-001:R28": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "An unowned premium theme without a trial starts that theme's trial, persists the selection and renders immediately; with an active trial it selects without extending the timer."
+    },
+    "SRC-001:R29": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "When the rendered premium theme's trial expires without ownership the effective theme becomes Classic with no Activity restart."
+    },
+    "SRC-001:R3": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Trial duration is exactly 300000 ms."
+    },
+    "SRC-001:R30": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Trials are per content item with independent expiry times."
+    },
+    "SRC-001:R31": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Store screens keep an obvious BUY action with the localized Play price next to TRY 5 MIN, and no individual theme products are added."
+    },
+    "SRC-001:R32": {
+      "actionable": true,
+      "class": "invariant",
+      "text": "Access correctness never depends on the composable countdown, which is informational only."
+    },
+    "SRC-001:R33": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "One home-screen AppWidget for START/STOP only, built from AppWidgetProvider plus RemoteViews, with no Glance, no config UI and no extra dependency."
+    },
+    "SRC-001:R34": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "The widget is a compact roughly 2x1 layout with Classic dark and gold branding and is not theme-selectable in this wave."
+    },
+    "SRC-001:R35": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Widget buttons toggle the real ProblipService through an explicit PendingIntent, with no second scheduler or audio engine and defensive platform exception handling."
+    },
+    "SRC-001:R36": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "A missing POST_NOTIFICATIONS must not make the widget unusable, the receiver never requests runtime permission, and no permission is added silently."
+    },
+    "SRC-001:R37": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Widget UI follows real session state STOPPED/STARTING/RUNNING/ERROR, refreshed from lifecycle events with no polling and no separate widgetIsRunning flag."
+    },
+    "SRC-001:R38": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "With the process gone a refreshed widget shows OFF; no BOOT_COMPLETED, no WorkManager polling and no periodic refresh."
+    },
+    "SRC-001:R39": {
+      "actionable": true,
+      "class": "invariant",
+      "text": "Rapid widget taps produce one scheduler, repeated STOP stays harmless, and START during ERROR creates a fresh session through the accepted lifecycle path."
+    },
+    "SRC-001:R4": {
+      "actionable": true,
+      "class": "invariant",
+      "text": "Repeated selection of an already active trial never extends its expiration."
+    },
+    "SRC-001:R40": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "The widget provider is declared in AndroidManifest.xml with AppWidgetProviderInfo XML, home screen only, without updatePeriodMillis polling."
+    },
+    "SRC-001:R41": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "text": "The 23 listed pure JVM tests for trial, effective-theme and widget logic exist, without adding Robolectric."
+    },
+    "SRC-001:R42": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "text": "Manual device acceptance on a physical device: the trial sound run, the trial theme run, the purchase-during-trial run and the fifteen widget rows."
+    },
+    "SRC-001:R5": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "After expiry an unowned sound becomes unavailable and an unowned theme stops rendering, with Classic effective again."
+    },
+    "SRC-001:R6": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Trials are reusable rather than one-time: after expiry the same content may start another five-minute trial."
+    },
+    "SRC-001:R7": {
+      "actionable": true,
+      "class": "non-goal",
+      "text": "No cooldowns, counters, accounts, device IDs, server validation or anti-abuse logic."
+    },
+    "SRC-001:R8": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "text": "Pre-flight fix 1: an active session never initializes audio from a synthetic default Settings()."
+    },
+    "SRC-001:R9": {
+      "actionable": true,
+      "class": "acceptance-criterion",
+      "text": "Pre-flight fix 2: SoundPool load completion cannot be lost in an immediate callback race and startup cannot stay suspended forever."
+    }
+  },
+  "derived_at": "2026-09-05T10:27:19Z",
+  "derived_from": "SRC-001",
+  "interpretation_revision": 42,
+  "schema_version": 1,
+  "source_sha256": "42bcd36b2de4e38cf60a81e08ba9a0be9625555d6f773cc3d7e445ba95248c39"
+}

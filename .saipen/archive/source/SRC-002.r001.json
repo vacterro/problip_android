@@ -1,0 +1,14 @@
+{
+  "clauses": {
+    "SRC-002:R0001": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Implement successful-blip Today/Week/Month/Total statistics in separate Preferences DataStore with immediate in-memory updates, bounded asynchronous persistence, Clock/ZoneId calendar semantics, sanitization, and authoritative successful-playback-only counting."
+    }
+  },
+  "derived_at": "2026-09-08T01:16:38Z",
+  "derived_from": "SRC-002",
+  "interpretation_revision": 1,
+  "schema_version": 1,
+  "source_sha256": "4f2cdee868488c9bfac1a7f5b790a3e3df0ac238a637c395e35bc85ac1bf38ac"
+}

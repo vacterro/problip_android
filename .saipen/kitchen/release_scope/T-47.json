@@ -1,0 +1,32 @@
+{
+  "op_id": "scope-a43d68a95ded4e04a923b06f777e3a5a",
+  "paths": {
+    ".codebase-memory/.gitattributes": "9e251c178593429f",
+    ".codebase-memory/artifact.json": "cb726a93af3b7702",
+    ".codebase-memory/graph.db.zst": "2b5496ce039d891f",
+    ".freebuff/project-id": "e831ea27560708d8",
+    "reference/wintage/antigravity.json": "7bc63811fc6323fc",
+    "reference/wintage/claudecode.json": "d627159c8f3739c8",
+    "reference/wintage/codenomad.json": "2b5c92bbd4d2f5cf",
+    "reference/wintage/custom.json": "56d394031db63994",
+    "reference/wintage/dracula.json": "a04bb9b3695b0517",
+    "reference/wintage/fpdefault.json": "786e82d3af5f4ff4",
+    "reference/wintage/freebuff.json": "054403310dec849c",
+    "reference/wintage/golden.json": "66f53579688beb08",
+    "reference/wintage/goldendefault.json": "3d405d0e7ed42305",
+    "reference/wintage/goldenvintage.json": "81839d3fd90c979a",
+    "reference/wintage/klite.json": "5f390e30bb409a96",
+    "reference/wintage/nord.json": "e7a33fcb2923f2f0",
+    "reference/wintage/oled.json": "10ad78b97d9ee783",
+    "reference/wintage/solarized.json": "0f05167f14cb0d59",
+    "reference/wintage/vintageclassic.json": "57c459a41c618193",
+    "reference/wintage/vintagedark.json": "49292d826faf3910"
+  },
+  "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+  "project_lineage": "lineage-ababa531be8d45d18b3e0c23adb738a9",
+  "recorded_at": "2026-09-09T03:09:07Z",
+  "schema_version": 1,
+  "source_head": "0661d1bad192e5e0a6eeff70a15942ea09f716fc",
+  "source_tree_fingerprint": "git-delta-v1:3bf38be36accb8c9ffa04733e62aa313e414325826a8508734cbadcd93202652",
+  "ticket": "T-47"
+}

@@ -1,0 +1,24 @@
+{
+  "clauses": {
+    "SRC-001:R1": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Ship exactly three features: five-minute trials for unowned premium sounds, five-minute trials for unowned premium themes, and one compact home-screen START/STOP widget."
+    },
+    "SRC-001:R2": {
+      "actionable": true,
+      "class": "invariant",
+      "text": "No subscription or licensing framework and no widget platform; all accepted core, service, billing, lifecycle and background behaviour preserved."
+    },
+    "SRC-001:R3": {
+      "actionable": true,
+      "class": "requirement",
+      "text": "Trial duration is exactly 300000 ms."
+    }
+  },
+  "derived_at": "2026-09-05T10:27:02Z",
+  "derived_from": "SRC-001",
+  "interpretation_revision": 3,
+  "schema_version": 1,
+  "source_sha256": "42bcd36b2de4e38cf60a81e08ba9a0be9625555d6f773cc3d7e445ba95248c39"
+}

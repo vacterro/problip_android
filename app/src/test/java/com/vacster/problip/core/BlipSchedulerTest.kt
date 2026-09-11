@@ -3,18 +3,24 @@ package com.vacster.problip.core
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.runBlocking
 
 /** Records every requested delay and still virtually suspends for it. */
 private class RecordingDelay : DelayBoundary {
@@ -439,6 +445,85 @@ class BlipSchedulerTest {
             scope.cancel()
             dispatcher.close()
         }
+    }
+
+    /**
+     * CORE-001 quiescence, real threads on purpose: the play parks like a real
+     * engine mid-play, STOP begins while it is in flight, and the awaitable stop
+     * must not return until that play has resolved — the resolved success still
+     * counts exactly once, and no new iteration can begin after the boundary.
+     * (The full teardown composition with the repository lives in
+     * TeardownQuiescenceTest; the virtual-time suite cannot park the play without
+     * blocking its single test thread.)
+     */
+    @Test
+    fun stopAndAwaitQuiescenceWaitsForAnInFlightPlayToResolve() {
+        val playEntered = CountDownLatch(1)
+        val releasePlay = CountDownLatch(1)
+        val plays = AtomicInteger(0)
+        val dispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+        val scope = CoroutineScope(SupervisorJob() + dispatcher)
+        val scheduler = BlipScheduler(
+            scope = scope,
+            player = BlipPlayer {
+                plays.incrementAndGet()
+                playEntered.countDown()
+                releasePlay.await(5, TimeUnit.SECONDS)
+                true
+            },
+            delayBoundary = DelayBoundary { kotlinx.coroutines.delay(it) },
+            initialInterval = IntervalConfig.Fixed(5_000),
+        )
+        try {
+            scheduler.start()
+            assertTrue(playEntered.await(5, TimeUnit.SECONDS))
+
+            var quiesced = false
+            val stopper = kotlin.concurrent.thread {
+                runBlocking { scheduler.stopAndAwaitQuiescence() }
+                quiesced = true
+            }
+            Thread.sleep(200)
+            assertFalse("quiescence must wait for the in-flight play", quiesced)
+
+            // The in-flight play resolves successfully and still counts.
+            releasePlay.countDown()
+            stopper.join(5_000)
+            assertTrue(quiesced)
+            assertEquals(1, plays.get())
+            assertEquals(ProblipState.STOPPED, scheduler.state.value)
+
+            // No new iteration can begin: the loop is fully terminated.
+            Thread.sleep(200)
+            assertEquals(1, plays.get())
+        } finally {
+            releasePlay.countDown()
+            scheduler.stop()
+            scope.cancel()
+            dispatcher.close()
+        }
+    }
+
+    @Test
+    fun stopAndAwaitQuiescenceIsIdempotentAndPromptWithNoLoop() = runTest {
+        val scheduler = BlipScheduler(
+            scope = backgroundScope,
+            player = BlipPlayer { true },
+            delayBoundary = DelayBoundary { kotlinx.coroutines.delay(it) },
+            initialInterval = IntervalConfig.Fixed(5_000),
+        )
+        // No loop ever ran: both awaits return immediately (prompt STOP).
+        scheduler.stopAndAwaitQuiescence()
+        scheduler.stopAndAwaitQuiescence()
+        assertEquals(ProblipState.STOPPED, scheduler.state.value)
+
+        // After a run: repeated awaitable stop is a no-op, not a deadlock.
+        scheduler.start()
+        advanceTimeBy(600)
+        runCurrent()
+        scheduler.stopAndAwaitQuiescence()
+        scheduler.stopAndAwaitQuiescence()
+        assertEquals(ProblipState.STOPPED, scheduler.state.value)
     }
 }
 

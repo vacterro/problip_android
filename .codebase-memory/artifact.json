@@ -1,0 +1,11 @@
+{
+    "schema_version": 2,
+    "commit": "6c123e8a2ce551817efc7962f60af56af2189c1c",
+    "indexed_at": "2026-09-08T00:45:55Z",
+    "project": "ProBlipAndroid",
+    "nodes": 5941,
+    "edges": 10576,
+    "original_size": 11796480,
+    "compressed_size": 1445601,
+    "compression_level": 9
+}

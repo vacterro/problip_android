@@ -1,0 +1,17 @@
+{
+  "board_hash": "767838767637f369",
+  "content_hash": "04a61cda1057710e",
+  "exit_code": 1,
+  "gate": "core",
+  "kind": "conformance_receipt",
+  "log_hash": "cbca72101efe8d7d",
+  "project_identity": "v:\\___vac\\__k\\__code\\_android\\problipandroid",
+  "receipt_id": "receipt-e48b13ed4b6b",
+  "schema_version": 2,
+  "source_head": "4a8f2273b7dc15176e6627214d79a667b1ee22d5",
+  "source_tree_fingerprint": "git-delta-v1:e7c4b966738c2d33c7b0d9d0100907e1afc0538e7fb94b807da94b8de2733d9d",
+  "state_hash": "25d0e992fc8ee6b9",
+  "timestamp_utc": "2026-09-05T01:55:45.220029Z",
+  "validator_protocol_version": "1",
+  "verdict": "FAIL"
+}
