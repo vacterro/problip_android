@@ -21,7 +21,7 @@ import com.vacster.problip.stats.BlipStatsRepository
 import com.vacster.problip.stats.PREMIUM_REWARD_BLIPS
 import com.vacster.problip.theme.ThemeCatalog
 import com.vacster.problip.trial.PremiumAccess
-import com.vacster.problip.trial.TrialAccess
+import com.vacster.problip.trial.PremiumActions
 import com.vacster.problip.trial.TrialCoordinator
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +39,20 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
     private val billing: BillingRepository = ProblipApp.billing(app)
     private val trials: TrialCoordinator = ProblipApp.trials(app)
     private val stats: BlipStatsRepository = ProblipApp.stats(app)
+
+    /**
+     * The premium UI action pipeline (readiness barrier + atomic sound-pool
+     * mutation) lives in [PremiumActions] so it can be unit-tested without the
+     * Android context. The ViewModel only wires the real authorities to it.
+     */
+    private val actions = PremiumActions(
+        ownershipReady = billing.ownershipReady,
+        trialsReady = trials.ready,
+        owned = billing.owned,
+        access = trials.access,
+        startTrial = { id, owned -> trials.startTrial(id, owned) },
+        updateSelectedSounds = { transform -> settingsRepo.updateSelectedSounds(transform) },
+    )
 
     /** Lifetime blip statistics and the 100K Premium reward backed by them. */
     val statsRecord: StateFlow<BlipStatsRecord> = stats.record
@@ -100,12 +114,7 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Starts (or declines to extend) the five-minute BLIP GLOW trial. */
     fun tryBlipGlow() {
-        viewModelScope.launch {
-            trials.startTrial(
-                contentId = TrialAccess.FEATURE_BLIP_GLOW,
-                owned = ownsThemePack() || access.value.developerAccess || access.value.earnedPremium,
-            )
-        }
+        viewModelScope.launch { actions.tryBlipGlow() }
     }
 
     fun start() = ProblipService.start(getApplication())
@@ -118,23 +127,9 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setIntervalMode(mode: IntervalMode) {
         viewModelScope.launch {
-            // Tapping a premium preset without an entitlement starts its five-minute
-            // trial instead of showing a purchase gate. Re-tapping during the trial
-            // never extends it (TrialAccess.startTrial decides that).
-            premiumFeatureId(mode)?.let { featureId ->
-                if (!access.value.grants(featureId, owned = ownsThemePack())) {
-                    trials.startTrial(featureId, owned = false)
-                }
-            }
+            actions.startIntervalTrialIfLocked(mode)
             settingsRepo.setInterval(mode)
         }
-    }
-
-    /** MANUAL and PULSE are the premium presets; the free ones have no trial id. */
-    private fun premiumFeatureId(mode: IntervalMode): String? = when (mode) {
-        IntervalMode.MANUAL -> TrialAccess.FEATURE_MANUAL_INTERVAL
-        IntervalMode.PULSE -> TrialAccess.FEATURE_PULSE_INTERVAL
-        else -> null
     }
 
     /** Both premium intervals ride the existing theme_pack purchase; no new Play SKU. */
@@ -160,16 +155,6 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { trials.resetTemporaryAccess() }
     }
 
-    /** Free, purchased, inside a trial, or under Developer Access. */
-    private fun accessible(soundId: String): Boolean {
-        val entry = SoundCatalog.byId(soundId) ?: return false
-        return access.value.grants(
-            contentId = soundId,
-            free = entry.free,
-            owned = soundId in billing.owned.value,
-        )
-    }
-
     /**
      * Toggle one sound of the random pool.
      *
@@ -179,17 +164,15 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
      *
      * The last accessible sound cannot be turned off: the session always needs
      * one sound to play, and a trial member counts as one.
+     *
+     * All decisions run inside [PremiumActions]: the ownership/access snapshot is
+     * read only after the readiness barrier, and the persisted pool is mutated
+     * atomically against the current DataStore value, never the synthetic
+     * startup state of [settings].
      */
     fun toggleSound(soundId: String) {
         SoundCatalog.byId(soundId) ?: return
-        if (!accessible(soundId)) {
-            trySound(soundId)
-            return
-        }
-        val current = settings.value.selectedSounds
-        val next = if (soundId in current) current - soundId else current + soundId
-        if (next.none { accessible(it) }) return
-        viewModelScope.launch { settingsRepo.setSelectedSounds(next) }
+        viewModelScope.launch { actions.toggleSound(soundId) }
     }
 
     /**
@@ -199,15 +182,7 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun trySound(soundId: String) {
         SoundCatalog.byId(soundId) ?: return
-        viewModelScope.launch {
-            // An existing grant (Developer Access or the earned reward) means no
-            // timer is worth starting.
-            val granted = soundId in billing.owned.value ||
-                access.value.developerAccess ||
-                access.value.earnedPremium
-            trials.startTrial(soundId, owned = granted)
-            settingsRepo.setSelectedSounds(settings.value.selectedSounds + soundId)
-        }
+        viewModelScope.launch { actions.trySound(soundId) }
     }
 
     /**
@@ -218,11 +193,8 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun setTheme(themeId: String) {
         val entry = ThemeCatalog.byId(themeId) ?: return
-        val granted = ownsThemePack() ||
-            access.value.developerAccess ||
-            access.value.earnedPremium
         viewModelScope.launch {
-            if (!entry.free && !granted) trials.startTrial(entry.id, owned = false)
+            actions.startThemeTrialIfLocked(entry.id, free = entry.free)
             settingsRepo.setTheme(entry.id)
         }
     }

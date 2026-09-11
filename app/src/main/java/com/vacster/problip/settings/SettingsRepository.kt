@@ -104,10 +104,32 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     /** Persisted as sorted CSV; unknown ids are dropped, empty falls back to original. */
     suspend fun setSelectedSounds(soundIds: Set<String>) {
-        val sanitized = soundIds.mapNotNull { id -> SoundCatalog.byId(id)?.id }.toSet()
-        val safe = sanitized.ifEmpty { setOf(SoundCatalog.ORIGINAL.id) }
-        dataStore.edit { it[SOUNDS] = safe.sorted().joinToString(",") }
+        dataStore.edit { prefs ->
+            prefs[SOUNDS] = sanitizeSoundPool(soundIds).sorted().joinToString(",")
+        }
     }
+
+    /**
+     * Read-modify-write of the sound pool inside one atomic store edit: the
+     * transform receives the CURRENT persisted pool, never a caller-held
+     * snapshot, so two rapid mutations (or one issued before DataStore's first
+     * emission during a cold start) cannot erase each other's selections with
+     * a stale set. The sanitized pool is re-persisted as sorted CSV with the
+     * original-sound fallback; an unknown id entering through [transform] is
+     * dropped here exactly as [setSelectedSounds] drops unknown ids.
+     */
+    suspend fun updateSelectedSounds(transform: (Set<String>) -> Set<String>) {
+        dataStore.edit { prefs ->
+            prefs[SOUNDS] = sanitizeSoundPool(transform(selectedSounds(prefs)))
+                .sorted()
+                .joinToString(",")
+        }
+    }
+
+    /** Catalog ids only; an empty result preserves the original-sound fallback. */
+    private fun sanitizeSoundPool(soundIds: Set<String>): Set<String> =
+        soundIds.mapNotNull { id -> SoundCatalog.byId(id)?.id }.toSet()
+            .ifEmpty { setOf(SoundCatalog.ORIGINAL.id) }
 
     /** Only catalog ids are stored; unknown ids and removed ids fall back to Classic. */
     suspend fun setTheme(themeId: String) {

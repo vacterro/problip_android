@@ -3,27 +3,38 @@ package com.vacster.problip.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.preferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vacster.problip.core.IntervalMode
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import androidx.datastore.preferences.core.booleanPreferencesKey
 
 /**
- * Note: each test performs at most ONE write per DataStore instance.
+ * Note: each test performs at most ONE write per real DataStore instance.
  * androidx.datastore cannot rename over an existing file on the Windows host
  * JVM, so repeat writes are verified on device instead (Android fs replaces).
+ * The repeat-write regressions below use [InMemoryDataStore], a deterministic
+ * test seam that keeps the production invariant testable on this host.
  */
 class SettingsRepositoryTest {
 
@@ -284,4 +295,87 @@ class SettingsRepositoryTest {
         assertEquals(setOf("sound_original"), s.selectedSounds)
         assertEquals(true, s.blipGlowEnabled)
     }
+
+    @Test
+    fun atomicPoolUpdateBasesTheWriteOnTheCurrentStoreValue() = runBlocking {
+        // CORE-004: the persisted pool {original, glass} is the only write
+        // basis. A snapshot captured BEFORE another actor added bonk must not
+        // become the write basis: a stale snapshot would erase bonk.
+        val store = InMemoryDataStore(
+            preferencesOf(stringPreferencesKey("sounds") to "sound_original,sound_glass"),
+        )
+        val repo = SettingsRepository(store)
+        val staleSnapshot = repo.settings.first().selectedSounds
+
+        repo.setSelectedSounds(setOf("sound_original", "sound_glass", "sound_bonk"))
+        repo.updateSelectedSounds { it + "sound_wood" }
+
+        assertEquals(
+            setOf("sound_original", "sound_glass", "sound_bonk", "sound_wood"),
+            repo.settings.first().selectedSounds,
+        )
+        // The stale snapshot itself stays stale; the mutation ignored it.
+        assertEquals(setOf("sound_original", "sound_glass"), staleSnapshot)
+    }
+
+    @Test
+    fun rapidAtomicPoolMutationsCannotEraseEachOther() = runBlocking {
+        val store = InMemoryDataStore(
+            preferencesOf(stringPreferencesKey("sounds") to "sound_original"),
+        )
+        val repo = SettingsRepository(store)
+        val additions = listOf(
+            "sound_glass", "sound_wood", "sound_soft_bell", "sound_bonk", "sound_space",
+        )
+        coroutineScope {
+            additions.forEach { id ->
+                launch { repo.updateSelectedSounds { it + id } }
+            }
+        }
+        assertEquals(
+            additions.toSet() + "sound_original",
+            repo.settings.first().selectedSounds,
+        )
+    }
+
+    @Test
+    fun atomicPoolUpdateKeepsTheSanitizationInvariants() = runBlocking {
+        val store = InMemoryDataStore(
+            preferencesOf(stringPreferencesKey("sounds") to "sound_original,sound_glass"),
+        )
+        val repo = SettingsRepository(store)
+
+        // An unknown id entering through the transform is dropped.
+        repo.updateSelectedSounds { it + "made_up_sound" }
+        assertEquals(setOf("sound_original", "sound_glass"), repo.settings.first().selectedSounds)
+
+        // An empty transform result falls back to the original sound.
+        repo.updateSelectedSounds { emptySet() }
+        assertEquals(setOf("sound_original"), repo.settings.first().selectedSounds)
+
+        // The legacy single-sound key still seeds the pool when CSV is absent.
+        val legacyStore = InMemoryDataStore(preferencesOf(stringPreferencesKey("sound") to "sound_glass"))
+        val legacyRepo = SettingsRepository(legacyStore)
+        legacyRepo.updateSelectedSounds { it + "sound_wood" }
+        assertEquals(setOf("sound_glass", "sound_wood"), legacyRepo.settings.first().selectedSounds)
+    }
+}
+
+/**
+ * Deterministic repeat-write seam for the atomic-pool regressions: an
+ * in-memory [DataStore] with no filesystem rename, so many edits per instance
+ * work on the Windows host JVM. Serialized under a mutex like the real store's
+ * per-file actor, so concurrent [updateData] calls cannot interleave.
+ */
+private class InMemoryDataStore(initial: Preferences = emptyPreferences()) : DataStore<Preferences> {
+    private val state = MutableStateFlow(initial)
+    private val lock = Mutex()
+
+    override val data: Flow<Preferences> = state.asStateFlow()
+
+    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences =
+        lock.withLock {
+            state.value = transform(state.value)
+            state.value
+        }
 }
