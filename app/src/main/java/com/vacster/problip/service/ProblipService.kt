@@ -158,21 +158,33 @@ class ProblipService : Service() {
             // Developer Access) AND the statistics/earned-entitlement read, before
             // the FIRST start(), so a premium sound, a persisted MANUAL/PULSE pick
             // or an already-earned 100K Premium is honoured by the very first blip.
-            val plan = ColdStart.awaitFirstPlan(
-                settings = settings,
-                ownershipReady = ProblipApp.billing(this@ProblipService).ownershipReady,
-                ownedNow = { ProblipApp.billing(this@ProblipService).owned.value },
-                accessReady = ProblipApp.trials(this@ProblipService).ready,
-                accessNow = { ProblipApp.trials(this@ProblipService).access.value },
-                statsReady = ProblipApp.stats(this@ProblipService).ready,
-            )
-            if (!audio.prepare(plan.pool)) {
-                failSession(token, localizedString(R.string.error_sound_load))
-                return@launch
+            //
+            // awaitFirstPlan is total for every expected source failure, so the
+            // only catch left here is for a truly unexpected crash: without it a
+            // SupervisorJob child would die silently and leave this session
+            // foregrounded in STARTING with no scheduler and no terminal state.
+            // Cancellation (STOP/teardown) rethrows untouched and must never
+            // become an ERROR.
+            try {
+                val plan = ColdStart.awaitFirstPlan(
+                    settings = settings,
+                    ownershipReady = ProblipApp.billing(this@ProblipService).ownershipReady,
+                    ownedNow = { ProblipApp.billing(this@ProblipService).owned.value },
+                    accessReady = ProblipApp.trials(this@ProblipService).ready,
+                    accessNow = { ProblipApp.trials(this@ProblipService).access.value },
+                    statsReady = ProblipApp.stats(this@ProblipService).ready,
+                )
+                if (!audio.prepare(plan.pool)) {
+                    failSession(token, localizedString(R.string.error_sound_load))
+                    return@launch
+                }
+                preparedPool = plan.pool
+                scheduler.interval = plan.interval
+                scheduler.start()
+            } catch (failure: Throwable) {
+                if (failure is kotlinx.coroutines.CancellationException) throw failure
+                failSession(token, localizedString(R.string.error_session_start))
             }
-            preparedPool = plan.pool
-            scheduler.interval = plan.interval
-            scheduler.start()
         }
         sessionJobs += scope.launch {
             scheduler.state.collect { st ->

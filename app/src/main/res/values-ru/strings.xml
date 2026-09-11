@@ -61,6 +61,7 @@
     <string name="developer_unlocked_body">7 ДНЕЙ ПРЕМИУМ-ДОСТУПА</string>
 
     <string name="error_sound_load">Не удалось загрузить звук</string>
+    <string name="error_session_start">Не удалось запустить Problip</string>
     <string name="error_playback">Ошибка воспроизведения</string>
 
     <string name="settings_title">НАСТРОЙКИ</string>

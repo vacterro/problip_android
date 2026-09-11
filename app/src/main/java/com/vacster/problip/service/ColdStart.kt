@@ -6,6 +6,7 @@ import com.vacster.problip.core.IntervalConfig
 import com.vacster.problip.core.PremiumInterval
 import com.vacster.problip.settings.SettingsRepository
 import com.vacster.problip.trial.PremiumAccess
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -36,7 +37,14 @@ import kotlinx.coroutines.withTimeoutOrNull
  * Barriers, not blocking: this suspends on flows, never on the main thread.
  * [readyTimeoutMs] is the safety valve — a snapshot that never becomes ready
  * (a failed disk read) must degrade to free content instead of leaving the user
- * with a foreground notification and no session at all.
+ * with a foreground notification and no session at all. The valve covers the
+ * WHOLE startup transaction: it starts before the first Settings acquisition,
+ * so a settings flow that never emits (or completes empty, or fails with an
+ * unexpected non-cancellation error) is bounded by the same budget. A Settings
+ * snapshot captured before another authority expires stays authoritative for
+ * the fallback plan; only never-received settings resolve from the sanitized
+ * [SettingsRepository.Settings] defaults, as runtime degradation only — they
+ * are never written back to DataStore.
  */
 internal object ColdStart {
 
@@ -58,6 +66,12 @@ internal object ColdStart {
      * says "this value is no longer a placeholder", while the getter reads the
      * newest value at the moment the plan is built, so a Play answer that lands
      * during the wait is used instead of the cache it superseded.
+     *
+     * Total for every expected source failure: a never-emitting, empty or
+     * throwing settings flow resolves through the bounded fallback instead of
+     * hanging or escaping. Cancellation stays cancellation — only the settings
+     * acquisition itself is guarded; a timeout's own cancellation passes through
+     * [withTimeoutOrNull] untouched.
      */
     suspend fun awaitFirstPlan(
         settings: Flow<SettingsRepository.Settings?>,
@@ -68,13 +82,20 @@ internal object ColdStart {
         statsReady: Flow<Boolean> = MutableStateFlow(true),
         readyTimeoutMs: Long = READY_TIMEOUT_MS,
     ): Plan {
-        val persisted = settings.filterNotNull().first()
+        var persisted: SettingsRepository.Settings? = null
         withTimeoutOrNull(readyTimeoutMs) {
+            try {
+                persisted = settings.filterNotNull().first()
+            } catch (failure: Throwable) {
+                // A cancelled wait (including the valve firing mid-acquisition)
+                // must stay cancellation; everything else degrades in place.
+                if (failure is CancellationException) throw failure
+            }
             ownershipReady.first { it }
             accessReady.first { it }
             statsReady.first { it }
         }
-        return plan(persisted, ownedNow(), accessNow())
+        return plan(persisted ?: SettingsRepository.Settings(), ownedNow(), accessNow())
     }
 
     /** Pure resolution of one snapshot triple; the same rules the running session uses. */

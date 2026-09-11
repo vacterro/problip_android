@@ -57,6 +57,7 @@
     <string name="developer_unlocked_body">7 PÄEVA PREMIUM-LIGIPÄÄSU</string>
 
     <string name="error_sound_load">Heli ei saanud laadida</string>
+    <string name="error_session_start">Problip ei saanud käivituda</string>
     <string name="error_playback">Taasesitus ebaõnnestus</string>
 
     <string name="settings_title">SEADED</string>

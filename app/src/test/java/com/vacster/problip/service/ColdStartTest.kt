@@ -9,7 +9,10 @@ import com.vacster.problip.settings.SettingsRepository
 import com.vacster.problip.trial.PremiumAccess
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -301,5 +304,129 @@ class ColdStartTest {
         // Premium sound AND the persisted MANUAL bounds — no free fallback.
         assertEquals(setOf(glass), resolved.pool)
         assertEquals(IntervalConfig.Random(9_000L, 20_000L), resolved.interval)
+    }
+
+    /**
+     * CORE-003 regressions: the READY_TIMEOUT_MS valve must cover the settings
+     * acquisition itself, so no START can stay orphaned in STARTING.
+     */
+    private val defaultTimeout = ColdStart.READY_TIMEOUT_MS
+
+    private suspend fun Snapshot.firstPlanOverriding(
+        settingsFlow: kotlinx.coroutines.flow.Flow<SettingsRepository.Settings?>,
+    ): ColdStart.Plan = ColdStart.awaitFirstPlan(
+        settings = settingsFlow,
+        ownershipReady = ownershipReady,
+        ownedNow = { owned.value },
+        accessReady = accessReady,
+        accessNow = { access.value },
+        statsReady = statsReady,
+    )
+
+    @Test
+    fun neverEmittingSettingsDegradesToBoundedDefaultsInsteadOfHanging() = runTest {
+        val s = Snapshot()
+        // A flow that never emits AND never completes: emptyFlow() would complete
+        // instantly, which is a different (also covered) failure. This one stays
+        // suspended forever, exactly like a DataStore read that never answers.
+        val never = flow<SettingsRepository.Settings?> { awaitCancellation() }
+        val plan = async { s.firstPlanOverriding(never) }
+        runCurrent()
+        assertFalse("a settings flow that never emits must not resolve early", plan.isCompleted)
+
+        // Ownership/access/stats DO become ready — the missing settings alone
+        // must still hold the plan open until the valve fires.
+        s.seedCache(emptySet())
+        s.restoreTemporaryAccess()
+        s.statsReady.value = true
+        runCurrent()
+        assertFalse("ready authorities must not rescue a missing Settings snapshot", plan.isCompleted)
+
+        advanceTimeBy(defaultTimeout + 1)
+        runCurrent()
+
+        val resolved = plan.await()
+        // Sanitized defaults: Original sound, free random interval — no invented
+        // premium ownership, and the safe fallback never hangs or throws.
+        assertEquals(setOf(SoundCatalog.ORIGINAL.id), resolved.pool)
+        assertEquals(IntervalConfig.Random(4_000L, 7_000L), resolved.interval)
+        assertEquals(SettingsRepository.Settings(), resolved.settings)
+    }
+
+    @Test
+    fun completedWithoutValueSettingsDegradesInsteadOfEscapingAsNoSuchElement() = runTest {
+        val s = Snapshot()
+        // emptyFlow() completes without a value: filterNotNull().first() would
+        // throw NoSuchElementException if the valve did not bound it.
+        val plan = async { s.firstPlanOverriding(emptyFlow()) }
+        runCurrent()
+        assertFalse("an empty-but-completed flow must not resolve early", plan.isCompleted)
+
+        s.seedCache(emptySet())
+        s.restoreTemporaryAccess()
+        s.statsReady.value = true
+        runCurrent()
+        // With the failure absorbed and every authority now ready, the plan
+        // resolves IMMEDIATELY — bounded, no escape, no STARTING orphan.
+        assertTrue("an empty-but-completed settings flow must resolve once authorities are ready", plan.isCompleted)
+
+        val resolved = plan.await()
+        assertEquals(setOf(SoundCatalog.ORIGINAL.id), resolved.pool)
+        assertEquals(IntervalConfig.Random(4_000L, 7_000L), resolved.interval)
+    }
+
+    @Test
+    fun throwingSettingsFlowDegradesInsteadOfOrphaningTheSession() = runTest {
+        val s = Snapshot()
+        // SettingsRepository rethrows every non-IOException upstream failure;
+        // the valve must catch that at the cold-start boundary and degrade.
+        val throwing = flow<SettingsRepository.Settings?> { throw IllegalStateException("corrupt store") }
+        val plan = async { s.firstPlanOverriding(throwing) }
+        runCurrent()
+        assertFalse("a failed settings read must not resolve before the authorities", plan.isCompleted)
+
+        s.seedCache(emptySet())
+        s.restoreTemporaryAccess()
+        s.statsReady.value = true
+        runCurrent()
+
+        // The failure is absorbed, the remaining authorities are ready, so the
+        // plan resolves now — bounded, no uncaught exception, no STARTING orphan.
+        val resolved = plan.await()
+        assertEquals(setOf(SoundCatalog.ORIGINAL.id), resolved.pool)
+        assertEquals(IntervalConfig.Random(4_000L, 7_000L), resolved.interval)
+        assertEquals(SettingsRepository.Settings(), resolved.settings)
+    }
+
+    @Test
+    fun realSettingsArrivingEarlyArePreservedWhenAnotherAuthorityTimesOut() = runTest {
+        val s = Snapshot()
+        val plan = async { s.firstPlan() }
+
+        val persisted = SettingsRepository.Settings(
+            selectedSounds = setOf(glass),
+            intervalMode = IntervalMode.MANUAL,
+            manualFromSeconds = 15,
+            manualToSeconds = 40,
+        )
+        s.settings.value = persisted
+        // Ownership answers too, but temporary access never initializes.
+        s.seedCache(emptySet())
+        s.statsReady.value = true
+        runCurrent()
+        assertFalse("the plan must wait for the never-ready access authority", plan.isCompleted)
+
+        advanceTimeBy(defaultTimeout + 1)
+        runCurrent()
+
+        val resolved = plan.await()
+        // The REAL persisted snapshot survived the valve: non-entitlement
+        // settings are never replaced by the synthetic defaults. Entitlement
+        // content degrades per the normal rules: glass is premium, so without
+        // access it falls back to Original, and MANUAL without access runs as
+        // the free random preset — the same behaviour as any degraded session.
+        assertEquals(persisted, resolved.settings)
+        assertEquals(setOf(SoundCatalog.ORIGINAL.id), resolved.pool)
+        assertEquals(IntervalConfig.Random(4_000L, 7_000L), resolved.interval)
     }
 }

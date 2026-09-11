@@ -63,6 +63,7 @@
 
     <!-- Session errors (resolved by the service) -->
     <string name="error_sound_load">Sound could not be loaded</string>
+    <string name="error_session_start">Problip could not start</string>
     <string name="error_playback">Playback failed</string>
 
     <!-- Settings -->

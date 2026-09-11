@@ -55,6 +55,7 @@
     <string name="developer_unlocked_body">プレミアム7日間</string>
 
     <string name="error_sound_load">サウンドを読み込めませんでした</string>
+    <string name="error_session_start">Problip を開始できませんでした</string>
     <string name="error_playback">再生に失敗しました</string>
 
     <string name="settings_title">設定</string>
