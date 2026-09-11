@@ -1,6 +1,7 @@
 package com.vacster.problip.trial
 
 import com.vacster.problip.audio.SoundCatalog
+import com.vacster.problip.billing.ProductCatalog
 import com.vacster.problip.core.IntervalMode
 import com.vacster.problip.theme.ThemeCatalog
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -247,13 +248,37 @@ class PremiumActionsTest {
         actions.startThemeTrialIfLocked(dracula, free = false)
         assertEquals(listOf(dracula), f.persistedTrials)
 
+        // Re-selection during the running trial never extends or re-persists.
+        actions.startThemeTrialIfLocked(dracula, free = false)
+        assertEquals(listOf(dracula), f.persistedTrials)
+
         // A global grant covers the next premium theme: no trial.
         f.access.value = PremiumAccess(developerAccess = true)
+        actions.startThemeTrialIfLocked(nord, free = false)
+        assertEquals(listOf(dracula), f.persistedTrials)
+
+        // Earned Premium is the same kind of global grant: no trial.
+        f.access.value = PremiumAccess(earnedPremium = true)
         actions.startThemeTrialIfLocked(nord, free = false)
         assertEquals(listOf(dracula), f.persistedTrials)
 
         // Free themes never start anything.
         actions.startThemeTrialIfLocked(ThemeCatalog.CLASSIC.id, free = true)
         assertEquals(listOf(dracula), f.persistedTrials)
+    }
+
+    @Test
+    fun ownedThemePackPreventsPremiumThemeTrial() = runTest {
+        // The pack purchase permanently unlocks every non-free theme; selecting
+        // one after readiness must never persist a per-theme trial.
+        val f = Fixture()
+        f.owned.value = setOf(ProductCatalog.THEME_PACK)
+        f.releaseAll()
+        val actions = f.actions()
+
+        actions.startThemeTrialIfLocked(dracula, free = false)
+        actions.startThemeTrialIfLocked(nord, free = false)
+
+        assertTrue(f.persistedTrials.isEmpty())
     }
 }

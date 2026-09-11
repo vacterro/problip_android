@@ -115,9 +115,13 @@ class PremiumActions(
         }
     }
 
-    /** Starts a premium theme's five-minute trial only when nothing grants it. */
+    /**
+     * Starts a premium theme's five-minute trial only when nothing grants it.
+     * The Theme Pack purchase permanently unlocks every non-free theme, so it
+     * must suppress the trial exactly like a global grant does.
+     */
     suspend fun startThemeTrialIfLocked(themeId: String, free: Boolean) {
         awaitAuthorities()
-        if (!free && !globalGrant()) startTrial(themeId, false)
+        if (!free && !themePackOwned() && !globalGrant()) startTrial(themeId, false)
     }
 }
