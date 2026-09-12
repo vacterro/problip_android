@@ -83,19 +83,32 @@ class SoundPoolAudioPlayer(context: Context) : AudioPlayer {
     }
 
     override suspend fun prepare(soundIds: Set<String>): Boolean = prepareLock.withLock {
+        if (!loadFor(soundIds)) return false
+        activate(soundIds)
+    }
+
+    override suspend fun loadFor(soundIds: Set<String>): Boolean = prepareLock.withLock {
         val entries = soundIds.mapNotNull { SoundCatalog.byId(it) }
         if (entries.size != soundIds.size) return false // unknown id: refuse, never crash
-        val wanted = entries.map { it.id }
-        val delta = synchronized(lock) {
-            if (released) return false
-            PoolDelta.between(loaded.keys.toSet(), wanted.toSet())
-        }
         // Load first: a failed switch must not drop samples that still play.
-        for (entry in entries.filter { it.id in delta.toLoad }) {
+        // Loading never touches activePool — a slow load for a superseded plan
+        // must not activate that stale pool merely because loading finished.
+        for (entry in entries) {
             if (!load(entry)) return false
         }
+        return true
+    }
+
+    override fun activate(soundIds: Set<String>): Boolean {
+        val wanted = soundIds.mapNotNull { SoundCatalog.byId(it)?.id }
+        if (wanted.size != soundIds.size) return false // unknown id: refuse
         synchronized(lock) {
             if (released) return false
+            // Activation verifies the requested samples are genuinely loaded;
+            // "wanted \ loaded" would also pass for a HALF-loaded sample, and
+            // play() would then hand SoundPool a dead sample id.
+            if (loaded.keys.toSet() != wanted.toSet()) return false
+            val delta = PoolDelta.between(loaded.keys.toSet(), wanted.toSet())
             for (id in delta.toUnload) {
                 loaded.remove(id)?.let { soundPool.unload(it) }
             }

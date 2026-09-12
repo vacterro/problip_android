@@ -130,6 +130,33 @@ class ProblipService : Service() {
         val token = lifecycle.begin()
         applyWakeLock()
 
+        // W2-002: ONE owner decides which desired plan becomes current. The
+        // cold-start barrier and every later settings/ownership/access emission
+        // submit here; the authority's single worker loads the newest plan's
+        // resources and only a still-newest revision is accepted — the one
+        // transition that activates the audio pool, publishes preparedPool,
+        // sets the effective interval, refreshes the notification and performs
+        // the first scheduler start. A stale load's success AND failure are
+        // discarded; a stale failure can never fail the session.
+        val authority = SessionPlanAuthority<DesiredPlan>(
+            scope = scope,
+            loadPool = { plan -> audio.loadFor(plan.resolved.pool) },
+            accept = { plan, firstAcceptedPlan ->
+                if (!audio.activate(plan.resolved.pool)) {
+                    failSession(token, localizedString(R.string.error_sound_load))
+                    return@SessionPlanAuthority
+                }
+                preparedPool = plan.resolved.pool
+                scheduler.interval = plan.resolved.interval
+                notifyUpdated(plan.resolved.settings, plan.owned, plan.access)
+                if (firstAcceptedPlan) scheduler.start()
+            },
+            onCurrentPlanLoadFailure = {
+                failSession(token, localizedString(R.string.error_sound_load))
+            },
+        )
+        authority.startWorker()?.let { sessionJobs += it }
+
         sessionJobs += scope.launch {
             val owned = ProblipApp.billing(this@ProblipService).owned
             val access = ProblipApp.trials(this@ProblipService).access
@@ -138,18 +165,15 @@ class ProblipService : Service() {
                     audio.setVolume(Volume.percentToGain(s.volumePercent))
                     // The SAME resolution the cold-start barrier uses, so a running
                     // session and a first session can never disagree about what a
-                    // snapshot means.
-                    val plan = ColdStart.plan(s, o, a)
-                    // Trial start/expiry, Developer Access, a reset or a purchase all
-                    // land here as a new interval on the SAME scheduler.
-                    scheduler.interval = plan.interval
-                    notifyUpdated(s, o, a)
-                    // Pool changes (settings, new purchases, a trial starting or
-                    // expiring) load in place; the scheduler loop is untouched.
-                    if (scheduler.state.value != ProblipState.STOPPED && plan.pool != preparedPool) {
-                        if (audio.prepare(plan.pool)) preparedPool = plan.pool
-                        else failSession(token, localizedString(R.string.error_sound_load))
-                    }
+                    // snapshot means. Submitting to the authority (not applying
+                    // inline) means a plan observed while the scheduler is still
+                    // STOPPED is remembered and applied by the single worker —
+                    // no second source emission is required after first start.
+                    // startEligible=false: the FIRST scheduler start belongs to
+                    // the cold-start barrier's own plan (CORE-003), so a live
+                    // emission that races the barrier can prepare audio but
+                    // never pre-start the session from partial readiness.
+                    authority.submit(DesiredPlan(ColdStart.plan(s, o, a), o, a), startEligible = false)
                 }
         }
         sessionJobs += scope.launch {
@@ -158,6 +182,9 @@ class ProblipService : Service() {
             // Developer Access) AND the statistics/earned-entitlement read, before
             // the FIRST start(), so a premium sound, a persisted MANUAL/PULSE pick
             // or an already-earned 100K Premium is honoured by the very first blip.
+            // The resolved plan is no longer applied inline: it enters the SAME
+            // desired-plan authority as every later update, so a slow load cannot
+            // commit a plan the process has already superseded.
             //
             // awaitFirstPlan is total for every expected source failure, so the
             // only catch left here is for a truly unexpected crash: without it a
@@ -174,13 +201,15 @@ class ProblipService : Service() {
                     accessNow = { ProblipApp.trials(this@ProblipService).access.value },
                     statsReady = ProblipApp.stats(this@ProblipService).ready,
                 )
-                if (!audio.prepare(plan.pool)) {
-                    failSession(token, localizedString(R.string.error_sound_load))
-                    return@launch
-                }
-                preparedPool = plan.pool
-                scheduler.interval = plan.interval
-                scheduler.start()
+                // startEligible=true latches the readiness barrier as resolved:
+                // the first scheduler start belongs to (a successor of) this plan.
+                authority.submit(
+                    DesiredPlan(
+                        plan,
+                        owned = ProblipApp.billing(this@ProblipService).owned.value,
+                        access = ProblipApp.trials(this@ProblipService).access.value,
+                    ),
+                )
             } catch (failure: Throwable) {
                 if (failure is kotlinx.coroutines.CancellationException) throw failure
                 failSession(token, localizedString(R.string.error_session_start))

@@ -31,6 +31,17 @@ private class FakeAudioPlayer : AudioPlayer {
         return prepared
     }
 
+    override suspend fun loadFor(soundIds: Set<String>): Boolean {
+        preparedIds = soundIds
+        return soundIds.isNotEmpty()
+    }
+
+    override fun activate(soundIds: Set<String>): Boolean {
+        prepared = soundIds.isNotEmpty()
+        preparedIds = soundIds
+        return prepared
+    }
+
     override fun play(): Boolean {
         if (!prepared || failNextPlay) return false
         plays++
