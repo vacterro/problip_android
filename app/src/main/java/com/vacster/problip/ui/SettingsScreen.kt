@@ -191,13 +191,12 @@ fun SettingsScreen(
     }
 }
 
-/** The supported languages. The tag is the AppCompat locale; the name is its endonym. */
-private val LanguageOptions = listOf(
-    null to "English",
-    "ru" to "Русский",
-    "et" to "Eesti",
-    "ja" to "日本語",
-)
+/**
+ * The supported languages. System Default is NOT a list entry — it is the empty
+ * AppCompat locale list, rendered as its own row. Every explicit language has a
+ * real non-null BCP-47 tag ([AppLanguage]), so selection can never dereference
+ * a null tag and explicit English is distinct from System Default.
+ */
 
 internal fun BlipCounterMode.labelRes(): Int = when (this) {
     BlipCounterMode.OFF -> R.string.counter_mode_off
@@ -372,9 +371,8 @@ private fun LanguageRow(onOpen: () -> Unit) {
         if (current.isEmpty) {
             stringResource(R.string.language_value_system)
         } else {
-            LanguageOptions
-                .firstOrNull { it.first != null && it.first == current[0]!!.language }
-                ?.second
+            AppLanguage.fromLocaleList(empty = false, firstLanguage = current[0]!!.language)
+                ?.endonym
                 ?: current[0]!!.displayLanguage
         }
     Row(
@@ -419,10 +417,12 @@ private fun LanguageRow(onOpen: () -> Unit) {
 @Composable
 private fun LanguageDialog(onDismiss: () -> Unit) {
     val current = AppCompatDelegate.getApplicationLocales()
-    val selectedTag: String? =
-        if (current.isEmpty) null else current[0]?.language?.takeIf { tag ->
-            LanguageOptions.any { it.first == tag }
-        }
+    // Empty list = System Default; an explicit supported tag = that language.
+    // Explicit "en" resolves to ENGLISH, never to System Default.
+    val selected = AppLanguage.fromLocaleList(
+        empty = current.isEmpty,
+        firstLanguage = if (current.isEmpty) null else current[0]!!.language,
+    )
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier.background(P.Surface).border(1.dp, P.Edge).padding(16.dp),
@@ -436,18 +436,21 @@ private fun LanguageDialog(onDismiss: () -> Unit) {
                 fontSize = 14.sp,
                 letterSpacing = 1.sp,
             )
+            // System Default is represented ONLY by the empty locale list.
             LanguageOptionRow(
                 name = stringResource(R.string.language_option_system),
-                selected = selectedTag == null,
+                selected = selected == null,
             ) {
                 onDismiss()
                 AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
             }
-            LanguageOptions.forEach { (tag, name) ->
-                LanguageOptionRow(name = name, selected = selectedTag == tag) {
+            AppLanguage.entries.forEach { language ->
+                LanguageOptionRow(name = language.endonym, selected = selected == language) {
                     onDismiss()
+                    // Non-null tag: selecting English applies "en" — no crash,
+                    // and explicit English is distinguishable from System Default.
                     AppCompatDelegate.setApplicationLocales(
-                        LocaleListCompat.forLanguageTags(tag!!),
+                        LocaleListCompat.forLanguageTags(language.tag),
                     )
                 }
             }
