@@ -1,179 +1,108 @@
-# Problip Android
+<p align="center">
+  <img src="docs/images/problip-mark.png" width="140" alt="Problip mark" />
+</p>
 
-Native Android port of [Problip](reference/windows/Problip.cs) — a tiny random-beep
-meditation timer. The Windows version is a behavioural reference only.
+<h1 align="center">Problip</h1>
 
-- Brand: **Problip**
-- Google Play title: *Problip: Random Beep Timer*
-- Application ID: `com.vacster.problip`
+<p align="center"><em>Native Android random-beep meditation timer built with Kotlin and Jetpack Compose.</em></p>
 
-## Stack
+<p align="center">
+  <a href="https://www.android.com/about/versions/oreo/"><img alt="Android" src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white" /></a>
+  <a href="https://kotlinlang.org/"><img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-2.3-7F52FF?logo=kotlin&logoColor=white" /></a>
+  <a href="https://developer.android.com/compose"><img alt="Jetpack Compose" src="https://img.shields.io/badge/Jetpack%20Compose-BOM%202025.06-4285F4?logo=jetpackcompose&logoColor=white" /></a>
+  <a href="https://github.com/vacterro/problip_android/actions/workflows/android-ci.yml"><img alt="CI" src="https://github.com/vacterro/problip_android/actions/workflows/android-ci.yml/badge.svg" /></a>
+</p>
 
-- Kotlin, Jetpack Compose, coroutines, DataStore, AndroidX AppCompat (per-app locales)
-- Play Billing 9.1.0 (one-time products only — no subscriptions)
-- Gradle Kotlin DSL, version catalog
-- compileSdk 36, targetSdk 36, minSdk 26
-- single `app` module
+## Overview
 
-## What it does
+Problip is a small, deliberately quiet meditation timer: press START and it emits a short beep at the selected interval until you stop it. The signature mode blips at a fresh random 4–7 second interval, so your attention is never allowed to settle into a rhythm — the original Windows program's core idea, rebuilt natively for Android.
 
-- **Session**: START plays the first blip after ~500 ms, then keeps blipping until STOP.
-  One foreground service, one scheduler, one audio engine — never two.
-- **Intervals**: random 4–7 s (free), fixed 5/10/15/20/30 s (free), plus two premium
-  presets — **MANUAL** (own FROM/TO seconds, clamped 1–3600 and reordered) and
-  **PULSE** (5 s, then a fresh random 10–20 s, alternating).
-- **Sounds**: six sounds, one free; the random pool draws only from what may play.
-- **Themes**: **15 Wintage palettes** (1 free + 14 premium), instant switch, one of
-  them light (Vintage Classic). The archive's `Custom` preset duplicated Golden
-  Default exactly and was removed; a stored `theme_wintage_custom` pick resolves
-  back to Golden Default.
-- **Trials**: any unowned premium sound, theme or interval preset can run a
-  **five-minute trial**, reusable, per item, persisted as a wall-clock expiry.
-  No cooldowns, no accounts, no device IDs, no server checks.
-- **Statistics & reward**: only real successful blips are counted (Today / This
-  week / This month / Total, in Settings; a `BLIPS n` line on Main, hideable).
-  At **100,000** lifetime successful blips Premium unlocks locally, permanently —
-  a separate `EARNED` access source that never mutates Play ownership and is
-  never revoked by a reset, refund or Billing refresh.
-- **Blip Glow**: a premium soft accent pulse on the Main background on every
-  successful blip (max 25% alpha). Rides the Customization Pack, its own
-  five-minute `feature_blip_glow` trial, Developer Access, or the earned reward;
-  the preference default is ON and hides nothing but the effect.
-- **Developer Access**: hidden seven-day global unlock behind a chord on the PROBLIP
-  title (held 20 s, then START/STOP while still held). Labels read `DEV`, never
-  `OWNED` — it expires, a purchase does not.
-- **Widget**: compact home-screen START/STOP widget following real session state,
-  no polling and no second scheduler. Primary size 1x1 (brand mark + status + one
-  large START/STOP surface), resizable toward 2x1/2x2 with the PROBLIP wordmark
-  appearing where the launcher reports the width for it.
-- **WakeLock**: one service-owned `PARTIAL_WAKE_LOCK` (`Problip:ActiveSession`) held
-  only while RUNNING — without it the CPU suspended between blips with the screen
-  off and a 5 s interval measured ~20 s.
-- **MINIMIZE**: explicit button that backgrounds the app without stopping the session.
-- **EXIT**: explicit button at the same utility level — a live session (STARTING/
-  RUNNING) is stopped through the normal service path first, then the task closes
-  (`finishAndRemoveTask`). STOPPED/ERROR exit without touching the service. No
-  `System.exit`, no killProcess.
-- **Help**: `?` in the Main header opens one Wintage dialog (scrollable inside,
-  Main itself never scrolls) — quick start, intervals, premium/trial, background,
-  tips, FAQ. The hidden Developer Access gesture is deliberately not documented.
-- **Languages**: English (default), Русский, Eesti, 日本語, plus System Default,
-  picked from a LANGUAGE row in Settings via `AppCompatDelegate.setApplicationLocales`
-  (persisted by AppCompat; `generateLocaleConfig` on, packaged locales pinned to
-  en/ru/et/ja). The service, notification and widget resolve their strings through
-  the same override.
+It is fully offline: no account, no analytics, no network permission. Sessions run in a foreground service with a partial wake lock, so blips keep their timing with the screen off or the app in the background. Premium content is generous — every premium sound, theme, and interval preset has a reusable five-minute trial, and Premium unlocks permanently on the device after 100,000 lifetime successful blips, independent of any purchase.
 
-Everything premium rides two Play products (the premium sounds and one Customization
-Pack); the access rule is one place:
-`free || owned || activeTrial || developerAccess || earnedPremium`.
+## Highlights
 
-## Layout
+- **Random or fixed intervals** — random 4–7 s, fixed 5/10/15/20/30 s, plus premium **MANUAL** (1–3600 s) and **PULSE** (5 s / 10–20 s alternating) presets
+- **Sound pool** — six sounds, one free, selectable for the random draw
+- **Themes** — 15 vintage palettes (1 free + 14 premium), instant switch, one light
+- **Five-minute trials** — reusable, per item, local wall-clock expiry
+- **Statistics** — Today / Week / Month / Total, only successful blips counted
+- **100,000-blip earned Premium** — permanent local entitlement, never revoked
+- **Home-screen widget** — 1x1-first resizable START/STOP, follows real session state
+- **Screen-off / background operation** — foreground service + session wake lock
+- **Localization** — English, Русский, Eesti, 日本語
 
-```text
-app/                    application module
-    src/main/java/com/vacster/problip/
-        core/           pure scheduling core (no Android dependencies)
-        trial/          five-minute trials + Developer Access (pure)
-        billing/        Play Billing wrapper + entitlement rules
-        service/        foreground service, notification, wake lock, cold start
-        widget/         home-screen START/STOP widget
-        ui/             Compose screens + 15 palettes
-    src/test/java/      deterministic JVM unit tests (no Robolectric)
-docs/behavior-contract.md   product behaviour taken from the Windows original
-docs/release-checklist.md   one authoritative gate list: CODE/CONTENT/PHYSICAL/PLAY/POLICY/FINAL + versionCode policy
-docs/release-signing.md     release signing strategy (Play App Signing, untracked keystore.properties, no secrets in Git)
-docs/privacy-policy.md      public privacy policy text (current product state; contact email still a human blocker)
-docs/data-safety.md         Play Data Safety answers + permission/SDK inventory (refreshed for the stats store)
-docs/play-fgs-declaration.md Play foreground-service declaration + WakeLock evidence + demo script
-docs/qa-audit-w12.md        QA audit verdicts + device checklist (W12/W12.1)
-reference/windows/      original Windows source + assets (behavioural reference)
-reference/wintage/      the 16 source palette JSONs (the 15 shipped palettes plus
-                        custom.json, whose duplicate preset was removed for release)
-plan/                   roadmap pack the project is built from
-```
+## Privacy and product model
 
-`reference/wintage/` is documentation, not a dependency: the palettes are compiled
-into `ui/theme/Palettes.kt` as literal colours and nothing reads the JSON at runtime.
+- No account is required; nothing identifies you or your device to a server.
+- Trial state and application preferences are stored locally.
+- Google Play Billing is used for **one-time** premium products only (no subscriptions): a premium sound pack and a Customization Pack.
+- Earned Premium (100,000 blips) is a separate local entitlement that never touches Play ownership.
+- Developer Access is a temporary internal unlock and is not purchase ownership.
 
-### Historical implementation / QA records
+Details: [privacy policy](docs/privacy-policy.md) · [data safety](docs/data-safety.md). (The privacy policy still awaits a public contact email before Play Console publication.)
 
-Superseded decision/evidence documents kept for provenance — not current specs:
+## Build from source
 
-- [Main no-scroll QA](docs/main-no-scroll-qa.md) — layout correction + sizing estimates (2026-09-05)
-- [Astra polish wave](docs/astra-polish-wave.md) — contrast/selection/haptics/lamp wave record
-- [W12 QA hardening](docs/qa-audit-w12.md) — QA audit verdicts + device checklist (W12/W12.1)
-- [Play FGS declaration](docs/play-fgs-declaration.md) — foreground-service declaration + WakeLock evidence + demo script
-- [Release checklist](docs/release-checklist.md) — authoritative gate list (CODE/CONTENT/PHYSICAL/PLAY/POLICY/FINAL)
+Requires **JDK 17+** and an Android SDK with **platform 36** (`sdk.dir` in an untracked `local.properties`).
 
-## Building
-
-Release identity: **versionName 1.0.0, versionCode 1** (`app/build.gradle.kts`).
-Once any build is uploaded to Play, every later upload needs a strictly greater
-versionCode — see `docs/release-checklist.md`.
-
-Requires JDK 17+ and an Android SDK with platform 36.
-Point `local.properties` at the SDK (`sdk.dir=...`).
+| Property | Value |
+|---|---|
+| applicationId | `com.vacster.problip` |
+| minSdk | 26 (Android 8.0) |
+| targetSdk / compileSdk | 36 |
 
 ```bash
-./gradlew assembleDebug
-./gradlew test
-./gradlew bundleRelease        # app/build/outputs/bundle/release/app-release.aab
+./gradlew test          # deterministic JVM regression tests
+./gradlew assembleDebug # debug APK, no signing material needed
+./gradlew lint
 ```
 
-Release artifacts build **unsigned** unless an untracked `keystore.properties`
-provides the signing secrets (`docs/release-signing.md`) — an unsigned release is
-fine for local verification and never usable for a production upload. Minification
-stays off for v1.0.0; enabling R8 would be a behaviour delta to revalidate, not a
-release step.
+Release signing material is intentionally untracked; see [release signing](docs/release-signing.md).
 
-## Wave status
+## Development status
 
-| Wave | Scope | Status |
-|------|-------|--------|
-| W0 | repository/bootstrap | done |
-| W1 | pure scheduling core | done |
-| W2 | audio (SoundPool + sound_original) | done |
-| W3 | settings (DataStore) + main UI | done |
-| W4 | foreground service + notification | code done; screen-off/device measurements pending |
-| W5 | sound catalog / random pool | done (premium WAVs are synthesized placeholders — see scripts/) |
-| W6 | themes | done — 15 Wintage palettes, 1 free + 14 in one pack (duplicate Custom removed) |
-| W7 | Google Play Billing | code done; live purchase gate pending Play Console |
-| W9 | privacy policy + Data Safety | drafted from shipped code (`docs/privacy-policy.md`, `docs/data-safety.md`); publication pending |
-| W10 | Play FGS declaration | declaration text + demo script done (`docs/play-fgs-declaration.md`); video needs a device |
-| W11 | billing UI | done — utility main screen, Sounds/Themes/Settings as secondary screens |
-| W12 | QA hardening | done — 5 defects fixed (`docs/qa-audit-w12.md`); 3 rows stay device-only |
-| W12.1 | runtime correctness + billing baseline | done — session state machine, Play Billing 9.1.0, one git baseline |
-| — | trials + widget | done — reusable five-minute trials, START/STOP widget |
-| — | screen-off reliability | done — session WakeLock, MINIMIZE, debug drift log; device acceptance pending |
-| — | Developer Access + MANUAL | done — hidden seven-day unlock, premium manual interval |
-| — | PULSE | done — alternating 5 s / 10–20 s premium preset |
-| — | interaction polish | done — playback lamp, STARTING status, haptics, pressed/selected states |
-| — | localization + help + exit | done — en/ru/et/ja per-app locales, `?` Help dialog, state-aware EXIT |
-| — | statistics + 100K earned Premium + Blip Glow | done — Today/Week/Month/Total on one own DataStore (memory authoritative, one-shot load), saturating counters, threshold self-heal, atomic earned cold start, separate Glow TRY action |
-| — | release content & identity | done — Problip mark + adaptive/monochrome launcher icons, brand mark in Main, alpha-mask notification icon, 1x1-first resizable widget, duplicate Custom theme removed; final curated sounds still pending user assets |
-| — | pre-Play release engineering (T-30) | done — versionName 1.0.0, bundleRelease path verified, signing strategy + release checklist docs, privacy/Data Safety/FGS reconciliation (stats store, WakeLock evidence, T-29 kept open) |
+Pre-release. The current tree:
 
-Evidence for the table above: `gradlew test assembleDebug assembleRelease lint lintVitalRelease`
-— **260 unique JVM tests, 0 failures, 31 suites**, lint clean (0 errors; remaining
-warnings reviewed — typography/dependency-age noise, the deliberate session WakeLock
-and two localization advisories), debug and release APKs built. `test` runs the
-debug and release variants of the same suite, so that number counts each test once.
+- Core application functionality is implemented and self-consistent.
+- Deterministic JVM regression coverage exists (300+ tests; latest local full gate at HEAD: 311 unique JVM tests, 0 failures, 0 lint errors).
+- Has passed the latest local full verification gate.
 
-Open gates that need something this repository cannot provide:
+Still open before any stable release:
 
-- W4 device gate: 30/60/60 min screen-on/background/locked runs, Battery Saver, Doze,
-  BT/headphones on a physical device (see `plan/01_MASTER_ROADMAP.md` W4), plus the
-  20 s Developer Access chord, a locked MANUAL session, the PULSE screen-on pattern
-  and the per-palette visual pass.
-- W7 live gate: buy, PENDING, acknowledgement, restore, reinstall, refund — needs
-  Play Console products and an internal test track (W8 developer setup first).
-- W9 publication: a public URL for the privacy policy and a contact email.
+- **Physical-device acceptance** — screen-off/background/locked timing runs, Battery Saver, Doze, Bluetooth/headphones.
+- **Live Google Play Billing acceptance** — real purchase, PENDING, restore, refund flows need Play Console products.
+- **Remaining correctness/performance audit work** and final curated premium audio assets.
 
-Next code wave: the release pipeline is prepared (T-30). What remains needs
-user-supplied final WAVs (premium sounds are still synthesized placeholders —
-`scripts/make_placeholder_sounds.py`, ledger in `reference/audio/SOURCES.md`),
-a real contact email (privacy policy blocker), signing credentials
-(`docs/release-signing.md`), a device (physical acceptance, T-014), a Play
-Console seat (T-009/T-010) or a hosting decision (T-015).
+Treat this as pre-release software: core gates are green, but nothing here is a published, device-accepted product yet.
 
-Project memory (waves, tickets, evidence) lives in `.saipen/`.
+## Documentation
+
+- [Behavior contract](docs/behavior-contract.md) — product behavior, inherited from the Windows original
+- [Release checklist](docs/release-checklist.md) — authoritative gate list (CODE / CONTENT / PHYSICAL / PLAY / POLICY / FINAL)
+- [Release signing](docs/release-signing.md) — Play App Signing strategy, untracked secrets
+- [Privacy policy](docs/privacy-policy.md) · [Data safety](docs/data-safety.md)
+- [Foreground-service declaration](docs/play-fgs-declaration.md) — Play FGS use-case declaration + WakeLock evidence
+- [QA audit](docs/qa-audit-w12.md) — W12/W12.1 verdicts + device checklist
+- [Development history](docs/development-history.md) — former implementation-focused overview and wave record
+
+## Project structure
+
+```text
+app/            application module (Kotlin, single module)
+    core/       pure scheduling core, no Android dependencies
+    trial/      five-minute trials + Developer Access (pure)
+    billing/    Play Billing wrapper + entitlement rules
+    service/    foreground service, notification, wake lock, cold start
+    widget/     home-screen START/STOP widget
+    ui/         Compose screens + 15 palettes
+docs/           behavior contract, release/checklist/signing, privacy, QA
+reference/      original Windows source + palette sources (reference only)
+scripts/        placeholder-sound and brand-asset generation scripts
+plan/           roadmap pack the project was built from
+```
+
+`.saipen/` is development-state and audit infrastructure, not a product feature.
+
+---
+
+Problip for Android is a native port of the original [Windows Problip](reference/windows/Problip.cs), which remains a behavioral reference only.

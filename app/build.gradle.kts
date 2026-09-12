@@ -89,11 +89,11 @@ kotlin {
 
 tasks.withType<Test>().configureEach {
     // DataStore's atomic .tmp rename collides with the V:-drive host tmpdir
-    // (scanner/filter holds the fresh file); use the standard C: temp instead.
-    systemProperty(
-        "java.io.tmpdir",
-        (System.getenv("LOCALAPPDATA") ?: """C:\Windows""") + """\Temp""",
-    )
+    // (scanner/filter holds the fresh file); use the standard Windows temp instead.
+    // Non-Windows CI hosts retain their platform default temp directory.
+    System.getenv("LOCALAPPDATA")?.let { localAppData ->
+        systemProperty("java.io.tmpdir", "$localAppData\\Temp")
+    }
 }
 
 dependencies {
