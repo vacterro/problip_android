@@ -53,11 +53,16 @@ class BillingRepository(
         .enableAutoServiceReconnection()
         .build()
 
-    private val _connection = MutableStateFlow(BillingConnection.DISCONNECTED)
-    val connection: StateFlow<BillingConnection> = _connection.asStateFlow()
+    /**
+     * One linearizable boundary for connection + ownership transitions: cache
+     * seeding and Play snapshots publish through it atomically, and only the
+     * caller granted a connection generation may start the BillingClient.
+     */
+    private val authority = BillingAuthority()
+    private val _connection get() = authority.connection
+    val connection: StateFlow<BillingConnection> = authority.connection
 
-    private val _owned = MutableStateFlow<Set<String>>(emptySet())
-    val owned: StateFlow<Set<String>> = _owned.asStateFlow()
+    val owned: StateFlow<Set<String>> = authority.owned
 
     /**
      * False until [owned] holds an initialized snapshot — either Play's answer or
@@ -69,12 +74,10 @@ class BillingRepository(
      * Deliberately NOT "Play answered": offline, Play never answers, and the
      * cached seed is a perfectly good snapshot to start from.
      */
-    private val _ownershipReady = MutableStateFlow(false)
-    val ownershipReady: StateFlow<Boolean> = _ownershipReady.asStateFlow()
+    val ownershipReady: StateFlow<Boolean> = authority.ownershipReady
 
     /** Purchases Play accepted but has not completed; never grants access. */
-    private val _pending = MutableStateFlow<Set<String>>(emptySet())
-    val pending: StateFlow<Set<String>> = _pending.asStateFlow()
+    val pending: StateFlow<Set<String>> = authority.pending
 
     private val _products = MutableStateFlow<Map<String, ProductUi>>(emptyMap())
     val products: StateFlow<Map<String, ProductUi>> = _products.asStateFlow()
@@ -108,51 +111,54 @@ class BillingRepository(
     private val purchaseQueryLock = Mutex()
     private val productQueryLock = Mutex()
 
-    @Volatile
-    private var seeded = false
-
-    /**
-     * Whether Play itself has answered a purchase query in this process. Once it
-     * has, its answer is the authority even when EMPTY — a refund or a revocation
-     * is exactly an empty answer, so the cache may not be re-applied over it.
-     */
-    @Volatile
-    private var playAnswered = false
-
     /**
      * Offline convenience seed from the local cache; never overrides Play truth.
      * Marks ownership initialized either way, so a first-run install with an empty
-     * cache does not make a cold start wait for the network.
+     * cache does not make a cold start wait for the network. One atomic authority
+     * transition: the admissibility check and the publication cannot interleave
+     * with a Play answer committing between them.
      */
     fun seedCached(cached: Set<String>) {
-        if (!seeded) {
-            seeded = true
-            if (seedableFromCache(_owned.value, cached, playAnswered)) _owned.value = cached
-        }
-        _ownershipReady.value = true
+        authority.seedCached(cached)
     }
 
     fun connect() {
-        if (_connection.value != BillingConnection.DISCONNECTED) return
-        _connection.value = BillingConnection.CONNECTING
-        client.startConnection(object : BillingClientStateListener {
+        // Atomic DISCONNECTED -> CONNECTING claim: exactly one racing caller
+        // receives a generation and may actually invoke startConnection.
+        val generation = authority.beginConnect() ?: return
+        val listener = object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
-                if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                    _connection.value = BillingConnection.CONNECTED
-                    _error.value = null
-                    refreshPurchases()
-                    queryProducts()
-                } else {
-                    _connection.value = BillingConnection.DISCONNECTED
-                    _error.value = R.string.error_store_unavailable
+                val setupOk = result.responseCode == BillingClient.BillingResponseCode.OK
+                // Accepted only while this generation is still current and
+                // CONNECTING; a stale callback changes no state and fires no
+                // queries.
+                if (authority.onSetupFinished(generation, setupOk)) {
+                    if (setupOk) {
+                        _error.value = null
+                        refreshPurchases()
+                        queryProducts()
+                    } else {
+                        _error.value = R.string.error_store_unavailable
+                    }
                 }
             }
 
             override fun onBillingServiceDisconnected() {
-                _connection.value = BillingConnection.DISCONNECTED
+                // Only the current generation's disconnect may end the connection;
+                // stale callbacks from an older attempt are ignored.
+                authority.onDisconnected(generation)
                 // Next connect()/resume reconnects and re-queries purchases.
             }
-        })
+        }
+        try {
+            client.startConnection(listener)
+        } catch (e: Exception) {
+            // startConnection threw synchronously after our generation was
+            // accepted: return that generation to DISCONNECTED so state cannot
+            // stay stuck in CONNECTING, then surface the existing behavior.
+            authority.abortConnect(generation)
+            _error.value = R.string.error_store_unavailable
+        }
     }
 
     /**
@@ -182,11 +188,13 @@ class BillingRepository(
                     val purchases = result.purchasesList.map(::toPurchaseInfo)
                     // Play has spoken: from here its answer supersedes the cache
                     // even when empty, so a refund or a revocation really revokes.
-                    playAnswered = true
-                    _owned.value = toOwned(purchases)
-                    _pending.value = toPending(purchases)
-                    _ownershipReady.value = true
-                    cacheOwned(_owned.value)
+                    // One atomic authority commit; the exact snapshot is captured
+                    // for the cache write so nothing can substitute a later read.
+                    val authoritativeOwned = authority.applyPlaySnapshot(
+                        owned = toOwned(purchases),
+                        pending = toPending(purchases),
+                    )
+                    cacheOwned(authoritativeOwned)
                     acknowledgeIfNeeded(purchases)
                     // A success must retract its own previous failure, otherwise a
                     // recovered store keeps showing "could not check your
