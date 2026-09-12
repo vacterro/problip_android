@@ -6,7 +6,7 @@ This document preserves the former implementation-focused project overview and h
 
 # Problip Android
 
-Native Android port of [Problip](reference/windows/Problip.cs) вЂ” a tiny random-beep
+Native Android port of [Problip](../reference/windows/Problip.cs) вЂ” a tiny random-beep
 meditation timer. The Windows version is a behavioural reference only.
 
 - Brand: **Problip**
@@ -86,12 +86,12 @@ app/                    application module
         ui/             Compose screens + 15 palettes
     src/test/java/      deterministic JVM unit tests (no Robolectric)
 docs/behavior-contract.md   product behaviour taken from the Windows original
-docs/release-checklist.md   one authoritative gate list: CODE/CONTENT/PHYSICAL/PLAY/POLICY/FINAL + versionCode policy
-docs/release-signing.md     release signing strategy (Play App Signing, untracked keystore.properties, no secrets in Git)
-docs/privacy-policy.md      public privacy policy text (current product state; contact email still a human blocker)
-docs/data-safety.md         Play Data Safety answers + permission/SDK inventory (refreshed for the stats store)
-docs/play-fgs-declaration.md Play foreground-service declaration + WakeLock evidence + demo script
-docs/qa-audit-w12.md        QA audit verdicts + device checklist (W12/W12.1)
+release-checklist.md        one authoritative gate list: CODE/CONTENT/PHYSICAL/PLAY/POLICY/FINAL + versionCode policy
+release-signing.md          release signing strategy (Play App Signing, untracked keystore.properties, no secrets in Git)
+privacy-policy.md           public privacy policy text (current product state; contact email still a human blocker)
+data-safety.md              Play Data Safety answers + permission/SDK inventory (refreshed for the stats store)
+play-fgs-declaration.md     Play foreground-service declaration + WakeLock evidence + demo script
+qa-audit-w12.md             QA audit verdicts + device checklist (W12/W12.1)
 reference/windows/      original Windows source + assets (behavioural reference)
 reference/wintage/      the 16 source palette JSONs (the 15 shipped palettes plus
                         custom.json, whose duplicate preset was removed for release)
@@ -105,11 +105,11 @@ into `ui/theme/Palettes.kt` as literal colours and nothing reads the JSON at run
 
 Superseded decision/evidence documents kept for provenance вЂ” not current specs:
 
-- [Main no-scroll QA](docs/main-no-scroll-qa.md) вЂ” layout correction + sizing estimates (2026-09-05)
-- [Astra polish wave](docs/astra-polish-wave.md) вЂ” contrast/selection/haptics/lamp wave record
-- [W12 QA hardening](docs/qa-audit-w12.md) вЂ” QA audit verdicts + device checklist (W12/W12.1)
-- [Play FGS declaration](docs/play-fgs-declaration.md) вЂ” foreground-service declaration + WakeLock evidence + demo script
-- [Release checklist](docs/release-checklist.md) вЂ” authoritative gate list (CODE/CONTENT/PHYSICAL/PLAY/POLICY/FINAL)
+- [Main no-scroll QA](main-no-scroll-qa.md) вЂ” layout correction + sizing estimates (2026-09-05)
+- [Astra polish wave](astra-polish-wave.md) вЂ” contrast/selection/haptics/lamp wave record
+- [W12 QA hardening](qa-audit-w12.md) вЂ” QA audit verdicts + device checklist (W12/W12.1)
+- [Play FGS declaration](play-fgs-declaration.md) вЂ” foreground-service declaration + WakeLock evidence + demo script
+- [Release checklist](release-checklist.md) вЂ” authoritative gate list (CODE/CONTENT/PHYSICAL/PLAY/POLICY/FINAL)
 
 ## Building
 

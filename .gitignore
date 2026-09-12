@@ -19,3 +19,7 @@ Thumbs.db
 keystore.properties
 *.jks
 *.keystore
+
+# Agent/tool local runtime state (not project source)
+.codebase-memory/
+.freebuff/
