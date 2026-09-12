@@ -54,6 +54,14 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
         updateSelectedSounds = { transform -> settingsRepo.updateSelectedSounds(transform) },
     )
 
+    /**
+     * W2-003: per-domain latest-user-intent authority. A multi-step command
+     * (trial persistence -> suspension -> final selection) may be overtaken by
+     * a newer command in the same domain; only the newest intent's final
+     * selection mutation survives. Domains are independent.
+     */
+    private val intents = SelectionIntents()
+
     /** Lifetime blip statistics and the 100K Premium reward backed by them. */
     val statsRecord: StateFlow<BlipStatsRecord> = stats.record
 
@@ -126,9 +134,14 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setIntervalMode(mode: IntervalMode) {
+        // Revision allocated at INVOCATION time, before the coroutine launch:
+        // coroutine scheduling must never reorder user intent.
+        val intent = intents.token(SelectionIntents.Domain.INTERVAL)
         viewModelScope.launch {
             actions.startIntervalTrialIfLocked(mode)
-            settingsRepo.setInterval(mode)
+            // The trial side effect may legitimately persist; a stale command's
+            // final selection may not.
+            if (intent.isCurrent()) settingsRepo.setInterval(mode)
         }
     }
 
@@ -172,7 +185,11 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun toggleSound(soundId: String) {
         SoundCatalog.byId(soundId) ?: return
-        viewModelScope.launch { actions.toggleSound(soundId) }
+        // Same domain identity as trySound: a toggle that delegates into the
+        // TRY path must carry THIS command's intent, never allocate a second
+        // revision inside the delegated call (no self-staleness).
+        val intent = intents.token(SelectionIntents.Domain.SOUND)
+        viewModelScope.launch { actions.toggleSound(soundId) { intent.isCurrent() } }
     }
 
     /**
@@ -182,7 +199,8 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun trySound(soundId: String) {
         SoundCatalog.byId(soundId) ?: return
-        viewModelScope.launch { actions.trySound(soundId) }
+        val intent = intents.token(SelectionIntents.Domain.SOUND)
+        viewModelScope.launch { actions.trySound(soundId) { intent.isCurrent() } }
     }
 
     /**
@@ -193,9 +211,10 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun setTheme(themeId: String) {
         val entry = ThemeCatalog.byId(themeId) ?: return
+        val intent = intents.token(SelectionIntents.Domain.THEME)
         viewModelScope.launch {
             actions.startThemeTrialIfLocked(entry.id, free = entry.free)
-            settingsRepo.setTheme(entry.id)
+            if (intent.isCurrent()) settingsRepo.setTheme(entry.id)
         }
     }
 }

@@ -30,6 +30,15 @@ class PremiumActions(
     private val updateSelectedSounds: suspend ((Set<String>) -> Set<String>) -> Unit,
 ) {
 
+    /**
+     * Latest-intent check for the sound-selection domain (W2-003). Deliberately
+     * a minimal functional seam so the trial package keeps no dependency on the
+     * UI layer: the ViewModel passes the token allocated at invocation time.
+     */
+    fun interface SoundIntent {
+        fun isCurrent(): Boolean
+    }
+
     /** MANUAL and PULSE are the premium presets; the free ones have no trial id. */
     private fun premiumFeatureId(mode: IntervalMode): String? = when (mode) {
         IntervalMode.MANUAL -> TrialAccess.FEATURE_MANUAL_INTERVAL
@@ -69,13 +78,19 @@ class PremiumActions(
      *
      * The last accessible sound cannot be turned off: the session always needs
      * one sound to play, and a trial member counts as one.
+     *
+     * W2-003: [intent] is the caller's already-allocated sound-domain command
+     * identity. It is passed through to the TRY path unchanged — the delegation
+     * must never allocate a second revision (self-staleness). The final pool
+     * mutation is suppressed when a newer sound command has superseded this one.
      */
-    suspend fun toggleSound(soundId: String) {
+    suspend fun toggleSound(soundId: String, intent: SoundIntent? = null) {
         awaitAuthorities()
         if (!soundAccessible(soundId)) {
-            trySound(soundId)
+            trySound(soundId, intent)
             return
         }
+        if (intent != null && !intent.isCurrent()) return
         updateSelectedSounds { current ->
             val next = if (soundId in current) current - soundId else current + soundId
             if (next.none { soundAccessible(it) }) current else next
@@ -86,13 +101,21 @@ class PremiumActions(
      * Start a sound's trial and select it, never deselect. The store screen's TRY
      * action needs this one-way form: a second tap there must not drop the sound
      * out of the pool the way the sound-selection toggle does.
+     *
+     * W2-003: [intent] carries the caller's latest-intent revision for the SOUND
+     * domain. The trial write (already begun) always finishes — DataStore work is
+     * never cancelled — but the final selected-pool mutation happens only when
+     * that intent is still current, so a stale TRY continuation can never
+     * overwrite a newer sound selection. A null intent (legacy callers) keeps
+     * the unconditional behavior.
      */
-    suspend fun trySound(soundId: String) {
+    suspend fun trySound(soundId: String, intent: SoundIntent? = null) {
         awaitAuthorities()
         val granted = soundId in owned.value ||
             access.value.developerAccess ||
             access.value.earnedPremium
         startTrial(soundId, granted)
+        if (intent != null && !intent.isCurrent()) return
         updateSelectedSounds { it + soundId }
     }
 
