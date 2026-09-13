@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.os.LocaleListCompat
+import com.vacster.problip.LocaleEpoch
 import com.vacster.problip.R
 import com.vacster.problip.settings.BlipCounterMode
 import com.vacster.problip.trial.PremiumAccess
@@ -434,6 +436,7 @@ private fun LanguageRow(onOpen: () -> Unit) {
  */
 @Composable
 private fun LanguageDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
     val current = AppCompatDelegate.getApplicationLocales()
     // Empty list = System Default; an explicit supported tag = that language.
     // Explicit "en" resolves to ENGLISH, never to System Default.
@@ -461,6 +464,9 @@ private fun LanguageDialog(onDismiss: () -> Unit) {
             ) {
                 onDismiss()
                 AppCompatDelegate.setApplicationLocales(LocaleListCompat.getEmptyLocaleList())
+                // W2-005: external surfaces (notification, channel, widgets) must
+                // re-render in the new locale without a session transition.
+                LocaleEpoch.notifyLocaleApplied(context.applicationContext, "")
             }
             AppLanguage.entries.forEach { language ->
                 LanguageOptionRow(name = language.endonym, selected = selected == language) {
@@ -470,6 +476,8 @@ private fun LanguageDialog(onDismiss: () -> Unit) {
                     AppCompatDelegate.setApplicationLocales(
                         LocaleListCompat.forLanguageTags(language.tag),
                     )
+                    // W2-005: same invalidation signal for the explicit pick.
+                    LocaleEpoch.notifyLocaleApplied(context.applicationContext, language.tag)
                 }
             }
         }

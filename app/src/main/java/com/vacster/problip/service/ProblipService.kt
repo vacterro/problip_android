@@ -95,9 +95,35 @@ class ProblipService : Service() {
         lastStartId = startId
         when (intent?.action) {
             ACTION_STOP -> stopSession()
+            ACTION_REFRESH_LOCALE -> {
+                // W2-005: locale changed in-process (or system-wide while System
+                // Default is selected). Re-render the channel metadata and the
+                // posted notification from the CURRENT real snapshot; the
+                // scheduler, audio engine and session state are untouched. A
+                // refresh while no session runs is a no-op beyond the channel.
+                onMain { refreshLocaleRendering() }
+            }
             else -> startSession()
         }
         return START_NOT_STICKY
+    }
+
+    /**
+     * W2-005: re-run ensureChannel (same channel id updates its localized
+     * name/description in place) and re-post the notification from the latest
+     * settings/ownership/access snapshot. Never starts or stops the session:
+     * a null scheduler means nothing is foregrounded and only the channel
+     * refresh applies.
+     */
+    private fun refreshLocaleRendering() {
+        ProblipNotification.ensureChannel(this)
+        val sched = scheduler ?: return
+        val s = settingsState?.value ?: return
+        notifyUpdated(
+            s,
+            ProblipApp.billing(this).owned.value,
+            ProblipApp.trials(this).access.value,
+        )
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -416,6 +442,9 @@ class ProblipService : Service() {
         const val ACTION_START = "com.vacster.problip.action.START"
         const val ACTION_STOP = "com.vacster.problip.action.STOP"
 
+        /** W2-005: rebuild notification/channel text after a locale change. */
+        const val ACTION_REFRESH_LOCALE = "com.vacster.problip.action.REFRESH_LOCALE"
+
         private const val TIMING_TAG = "ProblipTiming"
 
         fun start(context: Context) {
@@ -428,6 +457,19 @@ class ProblipService : Service() {
         fun stop(context: Context) {
             context.startService(
                 Intent(context, ProblipService::class.java).setAction(ACTION_STOP),
+            )
+        }
+
+        /**
+         * W2-005: ask the running service (if any) to re-render its localized
+         * surfaces. Plain startService — the service is already foregrounded
+         * when there is something to refresh, and a no-session call is a cheap
+         * no-op. No scheduler or audio side effect is possible by construction:
+         * the handler only touches the NotificationManager.
+         */
+        fun refreshLocale(context: Context) {
+            context.startService(
+                Intent(context, ProblipService::class.java).setAction(ACTION_REFRESH_LOCALE),
             )
         }
     }

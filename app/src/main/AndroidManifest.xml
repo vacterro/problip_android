@@ -53,6 +53,20 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/problip_widget_info" />
         </receiver>
+
+        <!-- W2-005: one locale invalidation path. Exported=false + the system
+             LOCALE_CHANGED action still works on API 26-33 because the system
+             broadcast targets a specific receiver; on 34+ the manifest intent
+             filter must also declare the system action explicitly, which it
+             does, and the custom action is package-scoped by definition. -->
+        <receiver
+            android:name=".LocaleChangeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.vacster.problip.action.LOCALE_APPLIED" />
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
