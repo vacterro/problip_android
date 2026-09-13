@@ -15,16 +15,20 @@ import com.vacster.problip.service.ProblipService
 import com.vacster.problip.service.ProblipSession
 import com.vacster.problip.settings.BlipCounterMode
 import com.vacster.problip.settings.SettingsRepository
+import com.vacster.problip.settings.SettingsWriteResult
 import com.vacster.problip.stats.BlipStats
 import com.vacster.problip.stats.BlipStatsRecord
 import com.vacster.problip.stats.BlipStatsRepository
 import com.vacster.problip.stats.PREMIUM_REWARD_BLIPS
 import com.vacster.problip.theme.ThemeCatalog
+import com.vacster.problip.trial.PersistenceOutcome
 import com.vacster.problip.trial.PremiumAccess
 import com.vacster.problip.trial.PremiumActions
 import com.vacster.problip.trial.TrialCoordinator
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -51,8 +55,36 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
         owned = billing.owned,
         access = trials.access,
         startTrial = { id, owned -> trials.startTrial(id, owned) },
-        updateSelectedSounds = { transform -> settingsRepo.updateSelectedSounds(transform) },
+        updateSelectedSounds = { transform ->
+            when (val result = settingsRepo.updateSelectedSounds(transform)) {
+                SettingsWriteResult.Success -> PersistenceOutcome.PERSISTED
+                SettingsWriteResult.IoFailure -> {
+                    reportSettingsWriteFailure()
+                    PersistenceOutcome.IO_FAILED
+                }
+            }
+        },
     )
+
+    /**
+     * W2-004 Part B: ONE caller-visible failure surface for expected settings
+     * write failures. It is explicitly a LOCAL persistence state — it never
+     * claims a Play/store failure, and it never touches the billing error or
+     * the session error domains. DataStore stays the settings source of truth:
+     * no Settings StateFlow value is optimistically mutated, so a failed write
+     * leaves the last successfully persisted value published.
+     */
+    private val _settingsWriteFailed = MutableStateFlow(false)
+    val settingsWriteFailed: StateFlow<Boolean> = _settingsWriteFailed.asStateFlow()
+
+    private fun reportSettingsWriteFailure() {
+        _settingsWriteFailed.value = true
+    }
+
+    /** Called by the UI once the failure has been presented. */
+    fun consumeSettingsWriteFailure() {
+        _settingsWriteFailed.value = false
+    }
 
     /**
      * W2-003: per-domain latest-user-intent authority. A multi-step command
@@ -108,21 +140,21 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
     )
 
     fun setShowBlipCounter(show: Boolean) {
-        viewModelScope.launch { settingsRepo.setShowBlipCounter(show) }
+        viewModelScope.launch { settingsRepo.setShowBlipCounter(show).consume() }
     }
 
     /** Display-only: never touches statistics recording. */
     fun setBlipCounterMode(mode: BlipCounterMode) {
-        viewModelScope.launch { settingsRepo.setBlipCounterMode(mode) }
+        viewModelScope.launch { settingsRepo.setBlipCounterMode(mode).consume() }
     }
 
     fun setBlipGlowEnabled(enabled: Boolean) {
-        viewModelScope.launch { settingsRepo.setBlipGlowEnabled(enabled) }
+        viewModelScope.launch { settingsRepo.setBlipGlowEnabled(enabled).consume() }
     }
 
     /** Starts (or declines to extend) the five-minute BLIP GLOW trial. */
     fun tryBlipGlow() {
-        viewModelScope.launch { actions.tryBlipGlow() }
+        viewModelScope.launch { actions.tryBlipGlow().consumeTrial() }
     }
 
     fun start() = ProblipService.start(getApplication())
@@ -130,7 +162,7 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
     fun stop() = ProblipService.stop(getApplication())
 
     fun setVolume(percent: Int) {
-        viewModelScope.launch { settingsRepo.setVolume(percent) }
+        viewModelScope.launch { settingsRepo.setVolume(percent).consume() }
     }
 
     fun setIntervalMode(mode: IntervalMode) {
@@ -138,10 +170,16 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
         // coroutine scheduling must never reorder user intent.
         val intent = intents.token(SelectionIntents.Domain.INTERVAL)
         viewModelScope.launch {
-            actions.startIntervalTrialIfLocked(mode)
+            // W2-004 Part C: a failed REQUIRED trial persistence stops the
+            // premium interval from being persisted as though access existed.
+            val prerequisite = actions.startIntervalTrialIfLocked(mode)
+            if (prerequisite == PersistenceOutcome.IO_FAILED) {
+                reportSettingsWriteFailure()
+                return@launch
+            }
             // The trial side effect may legitimately persist; a stale command's
             // final selection may not.
-            if (intent.isCurrent()) settingsRepo.setInterval(mode)
+            if (intent.isCurrent()) settingsRepo.setInterval(mode).consume()
         }
     }
 
@@ -152,7 +190,7 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Only validated bounds are persisted; the repository clamps and orders them. */
     fun setManualInterval(fromSeconds: Int, toSeconds: Int) {
-        viewModelScope.launch { settingsRepo.setManualInterval(fromSeconds, toSeconds) }
+        viewModelScope.launch { settingsRepo.setManualInterval(fromSeconds, toSeconds).consume() }
     }
 
     /**
@@ -160,12 +198,12 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
      * global premium access, reset (not stacked) on every successful unlock.
      */
     fun enableDeveloperAccess() {
-        viewModelScope.launch { trials.enableDeveloperAccess() }
+        viewModelScope.launch { trials.enableDeveloperAccess().consumeTrial() }
     }
 
     /** Back to free + genuinely purchased content. Play ownership is untouched. */
     fun resetTemporaryAccess() {
-        viewModelScope.launch { trials.resetTemporaryAccess() }
+        viewModelScope.launch { trials.resetTemporaryAccess().consumeTrial() }
     }
 
     /**
@@ -189,7 +227,7 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
         // TRY path must carry THIS command's intent, never allocate a second
         // revision inside the delegated call (no self-staleness).
         val intent = intents.token(SelectionIntents.Domain.SOUND)
-        viewModelScope.launch { actions.toggleSound(soundId) { intent.isCurrent() } }
+        viewModelScope.launch { actions.toggleSound(soundId) { intent.isCurrent() }.consumeTrial() }
     }
 
     /**
@@ -200,7 +238,7 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
     fun trySound(soundId: String) {
         SoundCatalog.byId(soundId) ?: return
         val intent = intents.token(SelectionIntents.Domain.SOUND)
-        viewModelScope.launch { actions.trySound(soundId) { intent.isCurrent() } }
+        viewModelScope.launch { actions.trySound(soundId) { intent.isCurrent() }.consumeTrial() }
     }
 
     /**
@@ -213,8 +251,25 @@ class ProblipViewModel(app: Application) : AndroidViewModel(app) {
         val entry = ThemeCatalog.byId(themeId) ?: return
         val intent = intents.token(SelectionIntents.Domain.THEME)
         viewModelScope.launch {
-            actions.startThemeTrialIfLocked(entry.id, free = entry.free)
-            if (intent.isCurrent()) settingsRepo.setTheme(entry.id)
+            // W2-004 Part C: theme mirror of the interval semantics — a failed
+            // required trial write means the locked theme is NOT persisted as
+            // though access existed.
+            val prerequisite = actions.startThemeTrialIfLocked(entry.id, free = entry.free)
+            if (prerequisite == PersistenceOutcome.IO_FAILED) {
+                reportSettingsWriteFailure()
+                return@launch
+            }
+            if (intent.isCurrent()) settingsRepo.setTheme(entry.id).consume()
         }
+    }
+
+    /** Every simple settings write funnels its result through here. */
+    private fun SettingsWriteResult.consume() {
+        if (this == SettingsWriteResult.IoFailure) reportSettingsWriteFailure()
+    }
+
+    /** Trial-pipeline outcomes surface the expected settings I/O failure only. */
+    private fun PersistenceOutcome.consumeTrial() {
+        if (this == PersistenceOutcome.IO_FAILED) reportSettingsWriteFailure()
     }
 }

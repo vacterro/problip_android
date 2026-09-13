@@ -36,22 +36,52 @@ data class ProductUi(
 /**
  * Single BillingClient wrapper. Play ownership is the authority; the cached
  * owned set is only a convenience for offline starts until the next query.
+ *
+ * W2-004 Part E: [cacheOwned] is a BEST-EFFORT seam. It reports whether the
+ * local persistence committed (true) or hit its expected local I/O failure
+ * (false); a `false` result is a local-convenience fact only and can never
+ * abort acknowledgement, the Play authority publication, or the Play-success
+ * bookkeeping. Expected failures come back as `false`, not as exceptions, so
+ * no broad catch lives here and nothing unexpected is silently swallowed.
  */
-class BillingRepository(
-    context: Context,
+class BillingRepository private constructor(
     private val scope: CoroutineScope,
-    private val cacheOwned: suspend (Set<String>) -> Unit,
+    private val cacheOwned: suspend (Set<String>) -> Boolean,
+    clientFactory: (PurchasesUpdatedListener) -> BillingClient,
 ) : PurchasesUpdatedListener {
 
-    private val client: BillingClient = BillingClient.newBuilder(context)
-        .setListener(this)
-        .enablePendingPurchases(
-            PendingPurchasesParams.newBuilder().enableOneTimeProducts().build(),
-        )
-        // PBL 9: the client retries a dropped Play connection itself, so a
-        // disconnect between two user actions no longer shows an empty store.
-        .enableAutoServiceReconnection()
-        .build()
+    /**
+     * Production constructor: the real BillingClient, built against the app
+     * context and bound to this repository as the purchases listener.
+     */
+    constructor(
+        context: Context,
+        scope: CoroutineScope,
+        cacheOwned: suspend (Set<String>) -> Boolean,
+    ) : this(scope, cacheOwned, { listener ->
+        BillingClient.newBuilder(context)
+            .setListener(listener)
+            .enablePendingPurchases(
+                PendingPurchasesParams.newBuilder().enableOneTimeProducts().build(),
+            )
+            // PBL 9: the client retries a dropped Play connection itself, so a
+            // disconnect between two user actions no longer shows an empty store.
+            .enableAutoServiceReconnection()
+            .build()
+    })
+
+    /**
+     * W2-004 test seam: the client arrives already built so the cache-failure
+     * contract is deterministically testable on the JVM without touching the
+     * production wiring.
+     */
+    internal constructor(
+        scope: CoroutineScope,
+        client: BillingClient,
+        cacheOwned: suspend (Set<String>) -> Boolean,
+    ) : this(scope, cacheOwned, { _ -> client })
+
+    private val client: BillingClient = clientFactory(this)
 
     /**
      * One linearizable boundary for connection + ownership transitions: cache
@@ -194,6 +224,13 @@ class BillingRepository(
                         owned = toOwned(purchases),
                         pending = toPending(purchases),
                     )
+                    // W2-004 Part E: the cache write is offline convenience only.
+                    // Its LOCAL persistence failure (false) must never become a
+                    // Play error: the authority already published the Play snapshot
+                    // above, acknowledgement below must still run, and the previous
+                    // PURCHASE_QUERY_FAILED state must still be cleared by this
+                    // successful query. The next successful refresh repairs the
+                    // cache; a later cache write never mutates BillingAuthority.
                     cacheOwned(authoritativeOwned)
                     acknowledgeIfNeeded(purchases)
                     // A success must retract its own previous failure, otherwise a
@@ -203,7 +240,8 @@ class BillingRepository(
                     _error.compareAndSet(PURCHASE_QUERY_FAILED, null)
                 } else {
                     _error.value = PURCHASE_QUERY_FAILED
-                }            }
+                }
+            }
         }
     }
 

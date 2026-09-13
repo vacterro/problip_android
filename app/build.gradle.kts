@@ -129,4 +129,11 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // The W2-004 Billing cache-failure regressions construct real Purchase
+    // objects, whose JSON parsing runs through org.json (an android.jar stub
+    // that throws "not mocked" on the host JVM). The real org.json artifact
+    // restores that behavior for unit tests only — the shipped APK is
+    // unaffected because testImplementation never reaches a build variant.
+    testImplementation("org.json:json:20240303")
 }

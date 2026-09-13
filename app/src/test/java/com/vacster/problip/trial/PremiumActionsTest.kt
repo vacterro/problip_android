@@ -43,25 +43,28 @@ class PremiumActionsTest {
             trialsReady = trialsReady,
             owned = owned,
             access = access,
-            startTrial = { contentId, ownedFlag ->
+            startTrial = lambda@{ contentId, ownedFlag ->
                 // Mirror the REAL TrialCoordinator pipeline: the pure
                 // TrialAccess map decides persistence, so a re-tap during a
                 // running trial cannot extend or re-record anything.
-                if (!ownedFlag) {
-                    val before = expiries.value
-                    expiries.value = TrialAccess.startTrial(
-                        expiries.value,
-                        contentId,
-                        now,
-                        owned = false,
-                    )
-                    if (expiries.value != before) persistedTrials += contentId
-                    access.value = access.value.copy(
-                        activeTrials = TrialAccess.activeIds(expiries.value, now),
-                    )
-                }
+                if (ownedFlag) return@lambda PersistenceOutcome.NOT_REQUIRED
+                val before = expiries.value
+                expiries.value = TrialAccess.startTrial(
+                    expiries.value,
+                    contentId,
+                    now,
+                    owned = false,
+                )
+                if (expiries.value != before) persistedTrials += contentId
+                access.value = access.value.copy(
+                    activeTrials = TrialAccess.activeIds(expiries.value, now),
+                )
+                PersistenceOutcome.PERSISTED
             },
-            updateSelectedSounds = { transform -> pool.value = transform(pool.value) },
+            updateSelectedSounds = { transform ->
+                pool.value = transform(pool.value)
+                PersistenceOutcome.PERSISTED
+            },
         )
 
         fun releaseAll() {

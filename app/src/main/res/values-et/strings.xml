@@ -89,6 +89,8 @@
     <string name="reset_temporary_access">TÜHISTA AJUTINE LIGIPÄÄS</string>
     <string name="reset_temporary_access_hint">Tühjendab arendaja ligipääsu ja kõik viieminutilised proovid. Ostud jäävad alles.</string>
     <string name="language_label">KEEL</string>
+    <!-- W2-004: kohalik seadete salvestamise viga; mitte Play/poe viga. -->
+    <string name="error_settings_save">Seadet ei saanud selles seadmes salvestada. Viimane salvestatud väärtus jääb kehtima.</string>
     <string name="language_value_system">SÜSTEEM</string>
     <string name="language_option_system">Süsteemi vaikeväärtus</string>
 

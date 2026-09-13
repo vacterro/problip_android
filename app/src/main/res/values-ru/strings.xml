@@ -93,6 +93,8 @@
     <string name="reset_temporary_access">СБРОСИТЬ ВРЕМЕННЫЙ ДОСТУП</string>
     <string name="reset_temporary_access_hint">Отключает доступ разработчика и все пятиминутные пробы. Покупки не удаляются.</string>
     <string name="language_label">ЯЗЫК</string>
+    <!-- W2-004: локальная ошибка сохранения настроек; не ошибка Play/магазина. -->
+    <string name="error_settings_save">Не удалось сохранить настройку на этом устройстве. Последнее сохранённое значение остаётся в силе.</string>
     <string name="language_value_system">СИСТЕМА</string>
     <string name="language_option_system">Системный по умолчанию</string>
 

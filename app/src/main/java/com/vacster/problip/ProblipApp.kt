@@ -5,7 +5,9 @@ import android.content.Context
 import com.vacster.problip.billing.BillingRepository
 import com.vacster.problip.service.ProblipSession
 import com.vacster.problip.settings.SettingsRepository
+import com.vacster.problip.settings.SettingsWriteResult
 import com.vacster.problip.stats.BlipStatsRepository
+import com.vacster.problip.trial.PersistenceOutcome
 import com.vacster.problip.trial.TemporaryAccess
 import com.vacster.problip.trial.TrialCoordinator
 import com.vacster.problip.widget.ProblipWidgetUpdater
@@ -36,16 +38,41 @@ class ProblipApp : Application() {
         billing = BillingRepository(
             context = this,
             scope = appScope,
-            cacheOwned = { owned -> settings.setOwnedProducts(owned) },
+            // W2-004 Part E: the ownership cache is OFFLINE CONVENIENCE ONLY.
+            // Play stays the authority; the typed write result becomes the
+            // best-effort boolean (true = committed, false = expected local
+            // I/O failure), which can never interrupt acknowledgement or the
+            // Play-success bookkeeping (see BillingRepository).
+            cacheOwned = { owned ->
+                settings.setOwnedProducts(owned) == SettingsWriteResult.Success
+            },
         )
         stats = BlipStatsRepository.fromContext(this, appScope)
         trials = TrialCoordinator(
             persisted = settings.settings.map {
                 TemporaryAccess(it.trialExpiries, it.developerAccessExpiryMillis)
             },
-            update = settings::updateTrialExpiries,
-            setDeveloperExpiry = settings::setDeveloperAccessExpiry,
-            clearTemporary = settings::clearTemporaryAccess,
+            // W2-004: the coordinator's neutral PersistenceOutcome is mapped from
+            // the repository's typed write result at the wiring edge, keeping the
+            // trial package independent of the settings package.
+            update = { transform ->
+                when (settings.updateTrialExpiries(transform)) {
+                    SettingsWriteResult.Success -> PersistenceOutcome.PERSISTED
+                    SettingsWriteResult.IoFailure -> PersistenceOutcome.IO_FAILED
+                }
+            },
+            setDeveloperExpiry = { expiry ->
+                when (settings.setDeveloperAccessExpiry(expiry)) {
+                    SettingsWriteResult.Success -> PersistenceOutcome.PERSISTED
+                    SettingsWriteResult.IoFailure -> PersistenceOutcome.IO_FAILED
+                }
+            },
+            clearTemporary = {
+                when (settings.clearTemporaryAccess()) {
+                    SettingsWriteResult.Success -> PersistenceOutcome.PERSISTED
+                    SettingsWriteResult.IoFailure -> PersistenceOutcome.IO_FAILED
+                }
+            },
             scope = appScope,
             earnedPremium = stats.earnedPremium,
             earnedReady = stats.ready,

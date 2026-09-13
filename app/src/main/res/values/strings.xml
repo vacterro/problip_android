@@ -96,6 +96,10 @@
     <string name="reset_temporary_access">RESET TEMPORARY ACCESS</string>
     <string name="reset_temporary_access_hint">Clears Developer Access and all five-minute trials. Purchases are never removed.</string>
     <string name="language_label">LANGUAGE</string>
+
+    <!-- W2-004: expected LOCAL settings persistence failure. Deliberately not a
+         store/Play message: the Google Play error surfaces stay separate. -->
+    <string name="error_settings_save">Could not save the setting on this device. Your last saved value is still in effect.</string>
     <string name="language_value_system">SYSTEM</string>
     <string name="language_option_system">System Default</string>
 

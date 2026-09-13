@@ -35,9 +35,12 @@ class TrialCoordinatorTest {
         persisted = f.store,
         update = { transform ->
             f.store.value = f.store.value.copy(trialExpiries = transform(f.store.value.trialExpiries))
+            PersistenceOutcome.PERSISTED
         },
-        setDeveloperExpiry = { expiry -> f.store.value = f.store.value.copy(developerExpiryMillis = expiry) },
-        clearTemporary = { f.store.value = TemporaryAccess() },
+        setDeveloperExpiry = { expiry -> f.store.value = f.store.value.copy(developerExpiryMillis = expiry)
+            PersistenceOutcome.PERSISTED
+            },
+        clearTemporary = { f.store.value = TemporaryAccess(); PersistenceOutcome.PERSISTED },
         scope = scope,
         clock = { f.now },
     )
@@ -171,9 +174,12 @@ class TrialCoordinatorTest {
             persisted = f.store,
             update = { transform ->
                 f.store.value = f.store.value.copy(trialExpiries = transform(f.store.value.trialExpiries))
+            PersistenceOutcome.PERSISTED
             },
-            setDeveloperExpiry = { expiry -> f.store.value = f.store.value.copy(developerExpiryMillis = expiry) },
-            clearTemporary = { f.store.value = TemporaryAccess() },
+            setDeveloperExpiry = { expiry -> f.store.value = f.store.value.copy(developerExpiryMillis = expiry)
+            PersistenceOutcome.PERSISTED
+            },
+            clearTemporary = { f.store.value = TemporaryAccess(); PersistenceOutcome.PERSISTED },
             scope = backgroundScope,
             clock = { f.now },
             earnedPremium = earned,
@@ -210,9 +216,12 @@ class TrialCoordinatorTest {
             persisted = f.store,
             update = { transform ->
                 f.store.value = f.store.value.copy(trialExpiries = transform(f.store.value.trialExpiries))
+            PersistenceOutcome.PERSISTED
             },
-            setDeveloperExpiry = { expiry -> f.store.value = f.store.value.copy(developerExpiryMillis = expiry) },
-            clearTemporary = { f.store.value = TemporaryAccess() },
+            setDeveloperExpiry = { expiry -> f.store.value = f.store.value.copy(developerExpiryMillis = expiry)
+            PersistenceOutcome.PERSISTED
+            },
+            clearTemporary = { f.store.value = TemporaryAccess(); PersistenceOutcome.PERSISTED },
             scope = backgroundScope,
             clock = { f.now },
             earnedPremium = earned,
@@ -249,9 +258,12 @@ class TrialCoordinatorTest {
             persisted = f.store,
             update = { transform ->
                 f.store.value = f.store.value.copy(trialExpiries = transform(f.store.value.trialExpiries))
+            PersistenceOutcome.PERSISTED
             },
-            setDeveloperExpiry = { expiry -> f.store.value = f.store.value.copy(developerExpiryMillis = expiry) },
-            clearTemporary = { f.store.value = TemporaryAccess() },
+            setDeveloperExpiry = { expiry -> f.store.value = f.store.value.copy(developerExpiryMillis = expiry)
+            PersistenceOutcome.PERSISTED
+            },
+            clearTemporary = { f.store.value = TemporaryAccess(); PersistenceOutcome.PERSISTED },
             scope = backgroundScope,
             clock = { f.now },
             earnedPremium = earned,

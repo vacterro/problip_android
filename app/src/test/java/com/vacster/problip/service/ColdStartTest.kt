@@ -254,9 +254,13 @@ class ColdStartTest {
             persisted = store,
             update = { transform ->
                 store.value = store.value.copy(trialExpiries = transform(store.value.trialExpiries))
+                com.vacster.problip.trial.PersistenceOutcome.PERSISTED
             },
-            setDeveloperExpiry = { },
-            clearTemporary = { store.value = com.vacster.problip.trial.TemporaryAccess() },
+            setDeveloperExpiry = { com.vacster.problip.trial.PersistenceOutcome.PERSISTED },
+            clearTemporary = {
+                store.value = com.vacster.problip.trial.TemporaryAccess()
+                com.vacster.problip.trial.PersistenceOutcome.PERSISTED
+            },
             scope = backgroundScope,
             clock = { 1_000_000L },
             earnedPremium = earned,

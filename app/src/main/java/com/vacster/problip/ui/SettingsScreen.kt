@@ -19,6 +19,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,8 +69,25 @@ fun SettingsScreen(
     val now = rememberTrialNow(enabled = access.developerAccess || glowTrialRunning)
     var languageDialogOpen by remember { mutableStateOf(false) }
     val calendarEpoch = rememberCalendarEpoch()
+    // W2-004 Part B: one lightweight surface for expected LOCAL settings write
+    // failures. Deliberately not the store footer: a failed DataStore write is
+    // not a Google Play failure and must never read like one.
+    val settingsWriteFailed by viewModel.settingsWriteFailed.collectAsState()
 
     StoreScaffold(title = stringResource(R.string.settings_title), onBack = onBack) {
+        if (settingsWriteFailed) {
+            Text(
+                text = stringResource(R.string.error_settings_save),
+                color = P.Danger,
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+            )
+            DisposableEffect(Unit) {
+                viewModel.consumeSettingsWriteFailure()
+                onDispose { }
+            }
+        }
         SectionLabel(stringResource(R.string.statistics_section))
         val stats = remember(statsRecord, calendarEpoch) { viewModel.currentStats() }
         StatRow(stringResource(R.string.stats_today), formatBlipCount(stats.todayCount))

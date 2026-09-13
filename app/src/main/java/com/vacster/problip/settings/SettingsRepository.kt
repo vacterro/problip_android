@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -94,19 +95,22 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             )
         }
 
-    suspend fun setVolume(percent: Int) {
-        dataStore.edit { it[VOLUME] = percent.coerceIn(0, 100) }
+    /**
+     * W2-004: every write mutation returns the one write-failure contract
+     * ([SettingsWriteResult]). A failed edit reports IoFailure; the store keeps
+     * its last committed value, which stays the settings source of truth.
+     */
+    suspend fun setVolume(percent: Int): SettingsWriteResult = write {
+        it[VOLUME] = percent.coerceIn(0, 100)
     }
 
-    suspend fun setInterval(mode: IntervalMode) {
-        dataStore.edit { it[INTERVAL] = mode.name }
+    suspend fun setInterval(mode: IntervalMode): SettingsWriteResult = write {
+        it[INTERVAL] = mode.name
     }
 
     /** Persisted as sorted CSV; unknown ids are dropped, empty falls back to original. */
-    suspend fun setSelectedSounds(soundIds: Set<String>) {
-        dataStore.edit { prefs ->
-            prefs[SOUNDS] = sanitizeSoundPool(soundIds).sorted().joinToString(",")
-        }
+    suspend fun setSelectedSounds(soundIds: Set<String>): SettingsWriteResult = write { prefs ->
+        prefs[SOUNDS] = sanitizeSoundPool(soundIds).sorted().joinToString(",")
     }
 
     /**
@@ -118,12 +122,12 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
      * original-sound fallback; an unknown id entering through [transform] is
      * dropped here exactly as [setSelectedSounds] drops unknown ids.
      */
-    suspend fun updateSelectedSounds(transform: (Set<String>) -> Set<String>) {
-        dataStore.edit { prefs ->
-            prefs[SOUNDS] = sanitizeSoundPool(transform(selectedSounds(prefs)))
-                .sorted()
-                .joinToString(",")
-        }
+    suspend fun updateSelectedSounds(
+        transform: (Set<String>) -> Set<String>,
+    ): SettingsWriteResult = write { prefs ->
+        prefs[SOUNDS] = sanitizeSoundPool(transform(selectedSounds(prefs)))
+            .sorted()
+            .joinToString(",")
     }
 
     /** Catalog ids only; an empty result preserves the original-sound fallback. */
@@ -132,57 +136,59 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             .ifEmpty { setOf(SoundCatalog.ORIGINAL.id) }
 
     /** Only catalog ids are stored; unknown ids and removed ids fall back to Classic. */
-    suspend fun setTheme(themeId: String) {
+    suspend fun setTheme(themeId: String): SettingsWriteResult {
         val normalized = ThemeCatalog.normalize(themeId)
-        dataStore.edit { it[THEME] = if (ThemeCatalog.isValidId(normalized)) normalized else ThemeCatalog.CLASSIC.id }
+        return write {
+            it[THEME] = if (ThemeCatalog.isValidId(normalized)) normalized else ThemeCatalog.CLASSIC.id
+        }
     }
 
-    /** Written only from successful Play purchase queries. */
-    suspend fun setOwnedProducts(productIds: Set<String>) {
+    /** Written only from successful Play purchase queries (best-effort cache; W2-004 Part E). */
+    suspend fun setOwnedProducts(productIds: Set<String>): SettingsWriteResult {
         val sanitized = productIds.filter { ProductCatalog.isValid(it) }.sorted()
-        dataStore.edit { it[OWNED] = sanitized.joinToString(",") }
+        return write { it[OWNED] = sanitized.joinToString(",") }
     }
 
     /**
      * Read-modify-write of the trial expiries inside one atomic store edit, so two
      * rapid taps cannot lose each other's trial. Only trialable ids are stored.
      */
-    suspend fun updateTrialExpiries(transform: (Map<String, Long>) -> Map<String, Long>) {
-        dataStore.edit { prefs ->
-            prefs[TRIALS] = encodeTrials(transform(parseTrials(prefs[TRIALS])))
-        }
+    suspend fun updateTrialExpiries(
+        transform: (Map<String, Long>) -> Map<String, Long>,
+    ): SettingsWriteResult = write { prefs ->
+        prefs[TRIALS] = encodeTrials(transform(parseTrials(prefs[TRIALS])))
     }
 
     /** Absolute wall-clock end of Developer Access; survives process death and reboot. */
-    suspend fun setDeveloperAccessExpiry(expiryMillis: Long) {
-        dataStore.edit { it[DEVELOPER_EXPIRY] = expiryMillis.coerceAtLeast(0L) }
+    suspend fun setDeveloperAccessExpiry(expiryMillis: Long): SettingsWriteResult = write {
+        it[DEVELOPER_EXPIRY] = expiryMillis.coerceAtLeast(0L)
     }
 
     /** Validated bounds only; the scheduler must never see FROM > TO or 0 seconds. */
-    suspend fun setManualInterval(fromSeconds: Int, toSeconds: Int) {
+    suspend fun setManualInterval(fromSeconds: Int, toSeconds: Int): SettingsWriteResult {
         val (from, to) = ManualInterval.sanitize(fromSeconds, toSeconds)
-        dataStore.edit {
+        return write {
             it[MANUAL_FROM] = from
             it[MANUAL_TO] = to
         }
     }
 
     /** Main-screen visibility of the blip counter; recording is unaffected. */
-    suspend fun setShowBlipCounter(show: Boolean) {
-        dataStore.edit { it[SHOW_COUNTER] = show }
+    suspend fun setShowBlipCounter(show: Boolean): SettingsWriteResult = write {
+        it[SHOW_COUNTER] = show
     }
 
     /**
      * Persist the Main counter presentation mode. The legacy boolean is left
      * untouched (it only migrates on read) and new writes go to the mode key.
      */
-    suspend fun setBlipCounterMode(mode: BlipCounterMode) {
-        dataStore.edit { it[COUNTER_MODE] = mode.name }
+    suspend fun setBlipCounterMode(mode: BlipCounterMode): SettingsWriteResult = write {
+        it[COUNTER_MODE] = mode.name
     }
 
     /** Blip Glow preference; access is decided elsewhere, never here. */
-    suspend fun setBlipGlowEnabled(enabled: Boolean) {
-        dataStore.edit { it[BLIP_GLOW] = enabled }
+    suspend fun setBlipGlowEnabled(enabled: Boolean): SettingsWriteResult = write {
+        it[BLIP_GLOW] = enabled
     }
 
     /**
@@ -192,11 +198,22 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
      * the app to free + owned. Lifetime statistics live in their own store and are
      * never reset — they back the permanent 100K Premium reward.
      */
-    suspend fun clearTemporaryAccess() {
-        dataStore.edit { prefs ->
-            prefs.remove(TRIALS)
-            prefs.remove(DEVELOPER_EXPIRY)
-        }
+    suspend fun clearTemporaryAccess(): SettingsWriteResult = write { prefs ->
+        prefs.remove(TRIALS)
+        prefs.remove(DEVELOPER_EXPIRY)
+    }
+
+    /**
+     * W2-004: the single mutation boundary. One policy for every write —
+     * expected DataStore IOException becomes [SettingsWriteResult.IoFailure],
+     * cancellation stays cancellation, anything else propagates — so no
+     * setter grows its own try/catch folklore. The edit lambda runs inside
+     * DataStore's atomic actor exactly as before.
+     */
+    private suspend fun write(
+        transform: (MutablePreferences) -> Unit,
+    ): SettingsWriteResult = SettingsWriteResult.editPolicy {
+        dataStore.edit(transform)
     }
 
     private fun manualBounds(p: Preferences): Pair<Int, Int> = ManualInterval.sanitize(

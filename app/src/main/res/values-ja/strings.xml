@@ -87,6 +87,8 @@
     <string name="reset_temporary_access">期間限定アクセスをリセット</string>
     <string name="reset_temporary_access_hint">開発者アクセスとすべての5分試用を解除します。購入は削除されません。</string>
     <string name="language_label">言語</string>
+    <!-- W2-004: 端末内の設定保存エラー（Google Play エラーではない）。 -->
+    <string name="error_settings_save">この端末に設定を保存できませんでした。最後に保存された値がそのまま有効です。</string>
     <string name="language_value_system">システム</string>
     <string name="language_option_system">システムのデフォルト</string>
 

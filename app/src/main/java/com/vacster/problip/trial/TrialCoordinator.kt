@@ -23,12 +23,17 @@ import kotlinx.coroutines.launch
  *
  * Writes go through [update] so the read-modify-write happens inside the store's
  * own atomic edit: rapid repeated taps then cannot lose each other's changes.
+ *
+ * W2-004 Part D: the persistence callbacks return [PersistenceOutcome] so
+ * callers can tell "persisted" from "expected settings I/O failure" from
+ * "nothing needed persisting". Cancellation stays cancellation — it is never
+ * translated into an outcome.
  */
 class TrialCoordinator(
     private val persisted: Flow<TemporaryAccess>,
-    private val update: suspend ((Map<String, Long>) -> Map<String, Long>) -> Unit,
-    private val setDeveloperExpiry: suspend (Long) -> Unit,
-    private val clearTemporary: suspend () -> Unit,
+    private val update: suspend ((Map<String, Long>) -> Map<String, Long>) -> PersistenceOutcome,
+    private val setDeveloperExpiry: suspend (Long) -> PersistenceOutcome,
+    private val clearTemporary: suspend () -> PersistenceOutcome,
     private val scope: CoroutineScope,
     private val clock: TrialClock = SystemTrialClock,
     /** The stats-side 100K reward, combined HERE so callers read one authority. */
@@ -134,12 +139,16 @@ class TrialCoordinator(
 
     /**
      * Starts the trial of [contentId], or leaves a running one exactly as it is.
-     * Expired records are pruned in the same write.
+     * Expired records are pruned in the same write. Returns the persistence
+     * outcome: [PersistenceOutcome.NOT_REQUIRED] when the id is not trialable or
+     * ownership already grants it, [PersistenceOutcome.PERSISTED] when the trial
+     * edit committed (including the no-change re-tap case), or
+     * [PersistenceOutcome.IO_FAILED] when the expected settings write failed.
      */
-    suspend fun startTrial(contentId: String, owned: Boolean) {
-        if (!TrialAccess.isTrialable(contentId) || owned) return
+    suspend fun startTrial(contentId: String, owned: Boolean): PersistenceOutcome {
+        if (!TrialAccess.isTrialable(contentId) || owned) return PersistenceOutcome.NOT_REQUIRED
         val now = clock.nowMillis()
-        update { current ->
+        return update { current ->
             TrialAccess.startTrial(
                 expiries = TrialAccess.prune(current, now),
                 contentId = contentId,
@@ -153,15 +162,12 @@ class TrialCoordinator(
      * Hidden developer convenience: seven days of global premium access from now.
      * Performing the gesture again resets the window instead of stacking it.
      */
-    suspend fun enableDeveloperAccess() {
+    suspend fun enableDeveloperAccess(): PersistenceOutcome =
         setDeveloperExpiry(PremiumAccess.developerExpiryFrom(clock.nowMillis()))
-    }
 
     /**
      * Drops every temporary grant in one store edit, so access recomputes once.
      * Play ownership lives in another key and is deliberately untouched.
      */
-    suspend fun resetTemporaryAccess() {
-        clearTemporary()
-    }
+    suspend fun resetTemporaryAccess(): PersistenceOutcome = clearTemporary()
 }
