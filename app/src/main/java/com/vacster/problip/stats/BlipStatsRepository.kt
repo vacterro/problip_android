@@ -259,40 +259,36 @@ class BlipStatsRepository(
         try {
             while (true) {
                 val wake = CompletableDeferred<Unit>()
-                val immediate: Boolean
-                val target: Long
-                val snapshot: BlipStatsRecord
-                synchronized(lock) {
+                val immediate = synchronized(lock) {
                     if (!dirty) {
                         workerJob = null
                         completeAllFlushWaiters()
                         return
                     }
-                    dirty = false
-                    immediate = immediateRequested
-                    immediateRequested = false
-                    target = revision
-                    snapshot = _record.value
                     wakeSignal = wake
+                    immediateRequested
                 }
-                val covered: Long
                 try {
                     if (!immediate) {
                         withTimeoutOrNull(PERSIST_INTERVAL_MS) { wake.await() }
                     }
-                    // Persist the snapshot captured with this pass's revision.
-                    // A newer revision that arrived while the write was suspended
-                    // re-armed [dirty], so the pump performs a trailing pass for
-                    // it instead of retiring — an old write can never satisfy
-                    // persistence for data it never captured.
-                    write(snapshot)
-                    covered = target
                 } finally {
                     synchronized(lock) { if (wakeSignal === wake) wakeSignal = null }
                 }
+
+                val target: Long
+                val snapshot: BlipStatsRecord
                 synchronized(lock) {
-                    if (covered >= coveredRevision) coveredRevision = covered
-                    // Release waiters whose target revision has been covered.
+                    target = revision
+                    snapshot = _record.value
+                    dirty = false
+                    immediateRequested = false
+                }
+
+                write(snapshot)
+
+                synchronized(lock) {
+                    if (target >= coveredRevision) coveredRevision = target
                     releaseCoveredWaiters()
                     if (!dirty) {
                         workerJob = null
@@ -378,8 +374,11 @@ class BlipStatsRepository(
     }
 
     companion object {
-        /** Bounded batching: at most one ordinary write per interval. */
-        const val PERSIST_INTERVAL_MS = 1_000L
+        /** PERF-001 bounded batching: at most one ordinary checkpoint write per interval.
+     *  30 s decouples ordinary persistence from playback frequency (write count
+     *  becomes independent of blip rate) while immediate requests (100K reward,
+     *  flush/flushAndAwait) still wake the checkpoint worker instantly. */
+        const val PERSIST_INTERVAL_MS = 30_000L
 
         private val DAY_KEY = stringPreferencesKey("day_key")
         private val TODAY_COUNT = longPreferencesKey("today_count")
