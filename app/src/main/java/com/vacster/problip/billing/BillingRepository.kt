@@ -92,6 +92,18 @@ class BillingRepository private constructor(
     private val _connection get() = authority.connection
     val connection: StateFlow<BillingConnection> = authority.connection
 
+    /**
+     * PERF-002 demand coalescing: at most one purchase query in flight plus at
+     * most one trailing rerun, no matter how many triggers arrive (resume,
+     * retry, connection lifecycle, purchase callback). The W2-001 mutex below
+     * remains the correctness guard for publication order inside one query;
+     * collapsed demands never enqueue on it.
+     */
+    private val purchaseRefresh = RefreshLimiter(scope)
+
+    /** Same O(1) bound for ProductDetails queries. */
+    private val productRefresh = RefreshLimiter(scope)
+
     val owned: StateFlow<Set<String>> = authority.owned
 
     /**
@@ -136,10 +148,18 @@ class BillingRepository private constructor(
      * One query of each kind at a time. Overlapping refreshes (resume + retry +
      * purchase callback) raced, so an older response could land last and publish
      * ownership that Play had already superseded. The mutex is FIFO, so the newest
-     * request is also the last one to publish.
+     * request is also the last one to publish. PERF-002: demand coalescing
+     * happens BEFORE this guard — repeated triggers collapse instead of
+     * queueing one coroutine per demand.
      */
     private val purchaseQueryLock = Mutex()
     private val productQueryLock = Mutex()
+
+    /** PERF-002 ProductDetails freshness (process-level, no background timer). */
+    @Volatile
+    private var productDetailsConnection: Long = -1L
+    @Volatile
+    private var productDetailsValidForConnection = false
 
     /**
      * Offline convenience seed from the local cache; never overrides Play truth.
@@ -166,6 +186,9 @@ class BillingRepository private constructor(
                     if (setupOk) {
                         _error.value = null
                         refreshPurchases()
+                        // PERF-002: metadata is not known valid for a NEW
+                        // connection — re-query it on (re)connection.
+                        productDetailsValidForConnection = false
                         queryProducts()
                     } else {
                         _error.value = R.string.error_store_unavailable
@@ -196,6 +219,11 @@ class BillingRepository private constructor(
      * immediately while the client is already connected, so ownership changes
      * made elsewhere (another device, a refund, a revocation) were never picked
      * up for as long as the process kept its connection. Query explicitly.
+     *
+     * PERF-002: ownership is re-queried on EVERY healthy resume (refunds and
+     * revocations must be discovered), but ProductDetails are process-cached
+     * while valid for the current connection — repeated resumes no longer
+     * refetch unchanged prices.
      */
     fun refresh() {
         if (_connection.value == BillingConnection.CONNECTED) {
@@ -208,7 +236,7 @@ class BillingRepository private constructor(
 
     /** Re-query owned purchases: the authoritative ownership check. */
     fun refreshPurchases() {
-        scope.launch(Dispatchers.IO) {
+        purchaseRefresh.request {
             purchaseQueryLock.withLock {
                 val params = QueryPurchasesParams.newBuilder()
                     .setProductType(BillingClient.ProductType.INAPP)
@@ -256,8 +284,29 @@ class BillingRepository private constructor(
             }
     }
 
+    /**
+     * Query product metadata. PERF-002 freshness rule (process-level, no
+     * background timer):
+     *
+     * - query when product metadata is absent (first use / never answered);
+     * - query when the current metadata is not known valid for THIS connection
+     *   (fresh connect / reconnect);
+     * - query after an explicit retry of a product-query failure;
+     * - otherwise retain the healthy process-cached ProductDetails: repeated
+     *   healthy Activity resumes do not refetch unchanged prices.
+     *
+     * Demand is bounded to one in-flight query plus at most one trailing rerun.
+     */
     fun queryProducts() {
-        scope.launch(Dispatchers.IO) {
+        val validForThisConnection =
+            productDetailsValidForConnection &&
+                productDetailsConnection == authority.currentGeneration
+        if (validForThisConnection) {
+            // Healthy process-cached metadata: repeated resumes do not refetch.
+            return
+        }
+        productDetailsConnection = authority.currentGeneration
+        productRefresh.request {
             productQueryLock.withLock {
                 val params = QueryProductDetailsParams.newBuilder()
                     .setProductList(
@@ -280,8 +329,11 @@ class BillingRepository private constructor(
                             formattedPrice = d.oneTimePurchaseOfferDetails?.formattedPrice ?: "",
                         )
                     }
+                    productDetailsValidForConnection = true
                     _error.compareAndSet(PRICE_QUERY_FAILED, null)
                 } else {
+                    // The failure stays fresh: a later explicit retry must query.
+                    productDetailsValidForConnection = false
                     _error.value = PRICE_QUERY_FAILED
                 }
             }
@@ -318,6 +370,8 @@ class BillingRepository private constructor(
                 if (purchases != null) {
                     scope.launch(Dispatchers.IO) {
                         acknowledgeIfNeeded(purchases.map(::toPurchaseInfo))
+                        // PERF-002: collapses into the one trailing authoritative
+                        // rerun when a restore query is already in flight.
                         refreshPurchases()
                     }
                 }

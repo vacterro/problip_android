@@ -162,4 +162,12 @@ class BillingAuthority {
             }
         }
     }
+
+    /**
+     * PERF-002: the current connection generation, usable as a freshness key.
+     * Metadata fetched under one connection is not known valid for the next,
+     * so a reconnect (generation change) re-queries product details.
+     */
+    val currentGeneration: Long
+        get() = synchronized(lock) { connectionGeneration }
 }
