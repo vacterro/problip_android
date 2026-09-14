@@ -207,14 +207,36 @@ fun ProblipScreen(
     val owned by viewModel.owned.collectAsState()
     val access by viewModel.access.collectAsState()
     val trialExpiries by viewModel.trialExpiries.collectAsState()
-    val statsRecord by viewModel.statsRecord.collectAsState()
+    // PERF-003: statsRecord is collected inside the counter-mode branches, not
+    // at screen scope — with the counter OFF, repeated blips must not
+    // invalidate Main's large control tree.
 
     val running = state == ProblipState.STARTING || state == ProblipState.RUNNING
     // Summarize the EFFECTIVE pool, including the Original-Blip fallback after
     // trial expiry. Selection and the full catalog live on the Sounds screen.
     val effectivePool =
         SoundCatalog.playableSelection(settings.selectedSounds, owned, access.grantedIds)
-    val now = rememberTrialNow(enabled = access.activeTrials.isNotEmpty())
+    // PERF-003: the one-second ticker runs ONLY while a countdown label that
+    // Main actually displays can change — the interval feature trial for the
+    // current effective mode, or a trial on a premium sound in the visible
+    // pool. Unrelated trials elsewhere keep counting on their own screens and
+    // must not create clock churn here. The initial read happens before any
+    // label composes, so no extra recomposition is introduced.
+    // PERF-003: the one-second ticker decision is PURE (see mainTickerEnabled)
+    // and must not depend on the ticking value itself; a stable now-reading is
+    // enough for the expiry comparison.
+    val nowProbe = remember { System.currentTimeMillis() }
+    val now = rememberTrialNow(
+        enabled = mainTickerEnabled(
+            intervalMode = settings.intervalMode,
+            trialExpiries = trialExpiries,
+            poolIds = effectivePool.toList(),
+            owned = owned,
+            developerAccess = access.developerAccess,
+            earnedPremium = access.earnedPremium,
+            nowMillis = nowProbe,
+        ),
+    )
     val manualAccessible = access.grantsManualInterval(viewModel.ownsThemePack())
     val pulseAccessible = access.grantsPulseInterval(viewModel.ownsThemePack())
     // A premium pick whose trial died shows as the free preset, matching what the
@@ -338,7 +360,9 @@ fun ProblipScreen(
             // the strip recomputes at midnight without a new blip.
             when (settings.blipCounterMode) {
                 BlipCounterMode.OFF -> Unit
-                BlipCounterMode.TOTAL ->
+                BlipCounterMode.TOTAL -> {
+                    // Collection lives in the smallest stats-consuming subtree.
+                    val statsRecord by viewModel.statsRecord.collectAsState()
                     Text(
                         text = stringResource(R.string.blips_format, formatBlipCount(statsRecord.totalCount)),
                         color = P.TextDim,
@@ -347,7 +371,9 @@ fun ProblipScreen(
                         lineHeight = 14.sp,
                         maxLines = 1,
                     )
+                }
                 BlipCounterMode.STATS -> {
+                    val statsRecord by viewModel.statsRecord.collectAsState()
                     val calendarEpoch = rememberCalendarEpoch()
                     val stats = remember(statsRecord, calendarEpoch) { viewModel.currentStats() }
                     MainStatsStrip(

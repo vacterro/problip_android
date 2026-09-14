@@ -12,6 +12,58 @@ import com.vacster.problip.trial.TrialAccess
 import kotlinx.coroutines.delay
 
 /**
+ * PERF-003: whether Main's shared one-second tick may run. Pure, so the
+ * decision is testable without a Compose runtime.
+ *
+ * The tick exists ONLY for a countdown label Main actually displays: the trial
+ * label of the currently selected premium interval feature, or a trial on a
+ * premium sound in the visible pool. Unrelated trials (glow, other sounds,
+ * other interval features) count on their own screens and must not create
+ * Main clock churn. Developer Access and the earned reward grant everything
+ * with no timer of their own, so while they hold, no countdown can be visible.
+ */
+internal fun mainTickerEnabled(
+    intervalMode: com.vacster.problip.core.IntervalMode,
+    trialExpiries: Map<String, Long>,
+    poolIds: List<String>,
+    owned: Set<String>,
+    developerAccess: Boolean,
+    earnedPremium: Boolean,
+    nowMillis: Long,
+): Boolean {
+    if (developerAccess || earnedPremium) return false
+    val featureId = when (intervalMode) {
+        com.vacster.problip.core.IntervalMode.PULSE -> TrialAccess.FEATURE_PULSE_INTERVAL
+        com.vacster.problip.core.IntervalMode.MANUAL -> TrialAccess.FEATURE_MANUAL_INTERVAL
+        else -> null
+    }
+    if (featureId != null) {
+        val expiry = trialExpiries[featureId]
+        if (expiry != null && expiry > nowMillis) return true
+    }
+    // A mixed pool shows its earliest active trial; any listed premium sound
+    // still inside its trial keeps the tick alive for that label.
+    return poolIds.any { id -> id !in owned && (trialExpiries[id] ?: 0L) > nowMillis }
+}
+
+/**
+ * PERF-003: whether a secondary store screen's shared one-second tick may run.
+ * Only trials of items LISTED on that screen ([listedIds], excluding already
+ * [owned] ones) can produce a visible countdown there; unrelated trials must
+ * not churn the screen. A running trial on a listed item keeps the tick alive
+ * so its countdown decrements every second.
+ */
+internal fun screenTickerEnabled(
+    listedIds: List<String>,
+    owned: Set<String>,
+    trialExpiries: Map<String, Long>,
+    developerAccess: Boolean,
+): Boolean {
+    if (developerAccess) return false
+    return listedIds.any { id -> id !in owned && trialExpiries[id] != null }
+}
+
+/**
  * One-second tick for the trial countdown, running only while [enabled] — with no
  * trial on screen nothing recomposes.
  *

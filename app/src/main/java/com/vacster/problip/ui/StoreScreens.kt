@@ -54,7 +54,16 @@ fun SoundsScreen(
     val storeError by viewModel.billingError.collectAsState()
     val access by viewModel.access.collectAsState()
     val trialExpiries by viewModel.trialExpiries.collectAsState()
-    val now = rememberTrialNow(enabled = access.activeTrials.isNotEmpty())
+    // PERF-003: the shared one-second tick decision is pure and scoped to the
+    // items LISTED here; unrelated trials must not churn this screen.
+    val now = rememberTrialNow(
+        enabled = screenTickerEnabled(
+            listedIds = SoundCatalog.all.map { it.id },
+            owned = owned,
+            trialExpiries = trialExpiries,
+            developerAccess = access.developerAccess,
+        ),
+    )
 
     val effectivePool =
         SoundCatalog.playableSelection(settings.selectedSounds, owned, access.grantedIds)
@@ -131,7 +140,15 @@ fun ThemesScreen(
     val storeError by viewModel.billingError.collectAsState()
     val access by viewModel.access.collectAsState()
     val trialExpiries by viewModel.trialExpiries.collectAsState()
-    val now = rememberTrialNow(enabled = access.activeTrials.isNotEmpty())
+    // PERF-003: only theme-listed trials matter for this screen's countdowns.
+    val now = rememberTrialNow(
+        enabled = screenTickerEnabled(
+            listedIds = ThemeCatalog.all.map { it.id } + ProductCatalog.THEME_PACK,
+            owned = owned,
+            trialExpiries = trialExpiries,
+            developerAccess = access.developerAccess,
+        ),
+    )
 
     val ownsPack = ProductCatalog.THEME_PACK in owned
     val packPrice = products[ProductCatalog.THEME_PACK]?.formattedPrice

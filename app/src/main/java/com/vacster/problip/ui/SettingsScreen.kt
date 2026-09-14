@@ -63,7 +63,8 @@ fun SettingsScreen(
     val access by viewModel.access.collectAsState()
     val developerExpiry by viewModel.developerExpiryMillis.collectAsState()
     val settings by viewModel.settings.collectAsState()
-    val statsRecord by viewModel.statsRecord.collectAsState()
+    // PERF-003: statsRecord is collected inside the statistics section subtree
+    // (see the StatsSection composable below), not at screen scope.
     val trialExpiries by viewModel.trialExpiries.collectAsState()
     val ownsPack = viewModel.ownsThemePack()
     val glowTrialRunning = trialExpiries[TrialAccess.FEATURE_BLIP_GLOW]
@@ -91,27 +92,9 @@ fun SettingsScreen(
             }
         }
         SectionLabel(stringResource(R.string.statistics_section))
-        val stats = remember(statsRecord, calendarEpoch) { viewModel.currentStats() }
-        StatRow(stringResource(R.string.stats_today), formatBlipCount(stats.todayCount))
-        StatRow(stringResource(R.string.stats_week), formatBlipCount(stats.weekCount))
-        StatRow(stringResource(R.string.stats_month), formatBlipCount(stats.monthCount))
-        StatRow(stringResource(R.string.stats_total), formatBlipCount(stats.totalCount))
-        Text(
-            text =
-                if (stats.earnedPremium) {
-                    stringResource(R.string.premium_reward_earned)
-                } else {
-                    stringResource(
-                        R.string.premium_reward_progress,
-                        formatBlipCount(stats.totalCount),
-                        formatBlipCount(viewModel.premiumRewardBlips),
-                    )
-                },
-            color = if (stats.earnedPremium) P.Gold else P.TextDim,
-            fontFamily = FontFamily.Monospace,
-            fontSize = 11.sp,
-            letterSpacing = 1.sp,
-        )
+        // PERF-003: the whole statistics block is one composable reading the
+        // stats flow itself; blips invalidate only this subtree.
+        StatsSection(viewModel = viewModel, calendarEpoch = calendarEpoch)
 
         SectionLabel(stringResource(R.string.visual_section))
         // OFF / TOTAL / STATS: a small mutually-exclusive set, so one stable
@@ -222,6 +205,37 @@ internal fun BlipCounterMode.labelRes(): Int = when (this) {
     BlipCounterMode.OFF -> R.string.counter_mode_off
     BlipCounterMode.TOTAL -> R.string.counter_mode_total
     BlipCounterMode.STATS -> R.string.counter_mode_stats
+}
+
+/**
+ * PERF-003: the whole statistics block as one subtree that reads the stats
+ * flow itself. A blip invalidates only this composable — visual controls,
+ * language selection and access controls elsewhere on the screen are untouched.
+ */
+@Composable
+private fun StatsSection(viewModel: ProblipViewModel, calendarEpoch: Int) {
+    val statsRecord by viewModel.statsRecord.collectAsState()
+    val stats = remember(statsRecord, calendarEpoch) { viewModel.currentStats() }
+    StatRow(stringResource(R.string.stats_today), formatBlipCount(stats.todayCount))
+    StatRow(stringResource(R.string.stats_week), formatBlipCount(stats.weekCount))
+    StatRow(stringResource(R.string.stats_month), formatBlipCount(stats.monthCount))
+    StatRow(stringResource(R.string.stats_total), formatBlipCount(stats.totalCount))
+    Text(
+        text =
+            if (stats.earnedPremium) {
+                stringResource(R.string.premium_reward_earned)
+            } else {
+                stringResource(
+                    R.string.premium_reward_progress,
+                    formatBlipCount(stats.totalCount),
+                    formatBlipCount(viewModel.premiumRewardBlips),
+                )
+            },
+        color = if (stats.earnedPremium) P.Gold else P.TextDim,
+        fontFamily = FontFamily.Monospace,
+        fontSize = 11.sp,
+        letterSpacing = 1.sp,
+    )
 }
 
 /** One statistics line: label on the left, locale-formatted count on the right. */
