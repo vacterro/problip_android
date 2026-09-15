@@ -64,14 +64,15 @@ Release signing material is intentionally untracked; see [release signing](docs/
 Pre-release. The current tree:
 
 - Core application functionality is implemented and self-consistent.
-- Deterministic JVM regression coverage exists (300+ tests; latest local full gate at HEAD: 311 unique JVM tests, 0 failures, 0 lint errors).
+- Deterministic JVM regression coverage exists (latest local full gate at HEAD 933a561: 424 unique JVM tests, 0 failures, 0 errors, lint 0 errors / 32 warnings).
 - Has passed the latest local full verification gate.
+- Repository correctness/performance audit is complete (all audit findings dispositioned; remaining work is external/human acceptance only).
 
 Still open before any stable release:
 
 - **Physical-device acceptance** — screen-off/background/locked timing runs, Battery Saver, Doze, Bluetooth/headphones.
 - **Live Google Play Billing acceptance** — real purchase, PENDING, restore, refund flows need Play Console products.
-- **Remaining correctness/performance audit work** and final curated premium audio assets.
+- **Final curated premium audio assets** — the packaged premium WAVs are synthesized placeholders, not final release assets (see [audio sources](reference/audio/SOURCES.md)).
 
 Treat this as pre-release software: core gates are green, but nothing here is a published, device-accepted product yet.
 
